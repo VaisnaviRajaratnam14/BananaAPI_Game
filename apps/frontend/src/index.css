@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+}
+
+.bg-animated {
+  background: radial-gradient(circle at 10% 20%, #fffbcc 0%, #fff1a8 30%, #ffd966 60%, #ffc847 100%);
+  animation: hue 12s infinite linear;
+}
+
+@keyframes hue {
+  0% { filter: hue-rotate(0deg) }
+  50% { filter: hue-rotate(25deg) }
+  100% { filter: hue-rotate(0deg) }
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.worksheet {
+  background: #ffffff;
+}
+.title-classic {
+  font-family: "Merriweather", serif;
+  color: #1737b8;
+  font-size: 2rem;
+}
+.subtitle-classic {
+  font-family: "Kalam", cursive;
+  color: #d22a2a;
+  font-size: 0.95rem;
+}
+.eq-grid {
+  display: grid;
+  gap: 0;
+}
+.eq-cell {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid #dff3df;
+  border-left: 1px solid #dff3df;
+}
+.eq-cell.last-col { border-right: 1px solid #dff3df; }
+.eq-cell.last-row { border-bottom: 1px solid #dff3df; }
+.eq-number {
+  font-family: "Kalam", cursive;
+  color: #1c36b0;
+  font-size: 2rem;
+  line-height: 1;
+}
+.eq-op {
+  font-family: "Kalam", cursive;
+  color: #d22a2a;
+  font-weight: 700;
+  font-size: 2.3rem;
+  line-height: 1;
+}
+.banana-cell img {
+  width: 40px;
+  height: 40px;
+  transform: rotate(7deg);
+}
+.eq-selected { background: #fff6e6; }
+.eq-correct { background: #e9f7ea; }
+.eq-wrong { background: #fdeaea; }
+.btn-classic {
+  background: #f3f3f3;
+  border: 1px solid #cccccc;
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+.btn-classic:hover {
+  background: #eaeaea;
+}
+.input-classic {
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  outline: none;
+}
+.input-classic:focus {
+  border-color: #ff9a6e;
+}

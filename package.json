@@ -1,0 +1,16 @@
+{
+  "name": "banana-game-monorepo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/frontend",
+    "apps/backend"
+  ],
+  "scripts": {
+    "install-all": "npm install -w apps/frontend -w apps/backend",
+    "dev": "concurrently -n backend,frontend -c yellow,green \"npm run dev -w apps/backend\" \"npm run dev -w apps/frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
