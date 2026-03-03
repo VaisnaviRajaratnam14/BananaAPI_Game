@@ -107,8 +107,30 @@ export default function Login() {
         <div className="flex gap-2 mb-6">
           <button onClick={() => setMode("email")} className={`px-3 py-2 rounded ${mode==="email"?"bg-banana text-black":"bg-white/60"}`}>Email</button>
           <button onClick={() => setMode("phone")} className={`px-3 py-2 rounded ${mode==="phone"?"bg-banana text-black":"bg-white/60"}`}>Phone</button>
-          <button onClick={() => setShowGoogle(true)} className="px-3 py-2 rounded bg-white/60">Google</button>
-          <button onClick={() => navigate("/oauth/facebook")} className="px-3 py-2 rounded bg-white/60">Facebook</button>
+          <button
+            onClick={async ()=>{
+              setLoading(true)
+              setError("")
+              try {
+                const email = identifier && identifier.includes("@") ? identifier : "user1@gmail.com"
+                const r = await api.get("/auth/oauth/google", { params: { email } })
+                const { loginTokenId } = r.data
+                sessionStorage.setItem("loginTokenId", loginTokenId)
+                sessionStorage.setItem("loginMode", "email")
+                await api.post("/otp/send", { loginTokenId, channel: "email" })
+                setToken("")
+                setMfaVerified(false)
+                navigate("/otp")
+              } catch {
+                setError("Google sign-in failed")
+              } finally {
+                setLoading(false)
+              }
+            }}
+            className="px-3 py-2 rounded bg-white/60"
+          >
+            Google
+          </button>
         </div>
         <form onSubmit={onLogin} className="space-y-3">
           {mode==="email" ? (
@@ -153,6 +175,9 @@ export default function Login() {
             </div>
           )}
           {idError && <div className="text-red-600 text-sm">{idError}</div>}
+          <div className="text-xs text-black/60">
+            {mode==="phone" ? "OTP will be sent to your phone number" : "OTP will be sent to your email"}
+          </div>
           <div className="relative">
             <input
               type={show ? "text" : "password"}
@@ -263,36 +288,7 @@ export default function Login() {
           </div>
         </div>
       )}
-      {showGoogle && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="glass p-6 rounded-2xl w-full max-w-sm">
-            <div className="text-lg mb-2">Choose Google account</div>
-            <div className="space-y-2">
-              {["user1@gmail.com","user2@gmail.com"].map(email => (
-                <button
-                  key={email}
-                  onClick={async ()=>{
-                    try {
-                      const r = await api.get("/auth/oauth/google", { params: { email } })
-                      const { loginTokenId } = r.data
-                      sessionStorage.setItem("loginTokenId", loginTokenId)
-                      await api.post("/otp/send", { loginTokenId, channel: "email" })
-                      setToken("")
-                      setMfaVerified(false)
-                      setShowGoogle(false)
-                      navigate("/otp")
-                    } catch {}
-                  }}
-                  className="w-full text-left px-3 py-2 rounded bg-white/70"
-                >
-                  {email}
-                </button>
-              ))}
-              <button onClick={()=>setShowGoogle(false)} className="px-3 py-2 rounded bg-white/60 w-full">Close</button>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </div>
   )
 }
