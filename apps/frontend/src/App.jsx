@@ -1,5 +1,5 @@
 import React from "react"
-import { Routes, Route, Navigate, Link } from "react-router-dom"
+import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom"
 import { AuthProvider, useAuth } from "./context/AuthContext"
 import Landing from "./pages/Landing"
 import Login from "./pages/Login"
@@ -30,10 +30,13 @@ function Nav() {
 }
 
 export default function App() {
+  const location = useLocation()
+  const hideNav = location.pathname === "/login"
+  const wrapperClass = `min-h-screen ${hideNav ? "bg-hero" : "bg-animated"}`
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-animated">
-        <Nav />
+      <div className={wrapperClass}>
+        {!hideNav && <Nav />}
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
