@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { api } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
+import bananaImage from "../assets/banana.avif"
 
 export default function Login() {
   const navigate = useNavigate()
@@ -102,11 +103,27 @@ export default function Login() {
   }, [])
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="glass p-8 rounded-2xl w-full max-w-md">
-        <div className="flex gap-2 mb-6">
-          <button onClick={() => setMode("email")} className={`px-3 py-2 rounded ${mode==="email"?"bg-banana text-black":"bg-white/60"}`}>Email</button>
-          <button onClick={() => setMode("phone")} className={`px-3 py-2 rounded ${mode==="phone"?"bg-banana text-black":"bg-white/60"}`}>Phone</button>
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+      <div className="relative order-2 md:order-2 h-80 sm:h-96 md:h-auto md:min-h-[calc(100vh-96px)] lg:col-span-3">
+        <img
+          src={bananaImage}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
+      <div className="relative order-1 md:order-1 flex items-center justify-center min-h-screen px-4 py-10">
+        <div className="parchment p-6 md:p-8 rounded-2xl w-full max-w-sm md:max-w-md">
+          <div className="text-center mb-6">
+            <div className="text-4xl md:text-5xl font-extrabold text-banana-dark leading-none">Brain Adveture</div>
+            <div className="mt-2 text-lg font-semibold text-orange-700">Sign In</div>
+          </div>
+          <div className="flex gap-3 mb-6 justify-center">
+            <button onClick={() => setMode("email")} className={`${mode==="email"?"btn-green":"bg-white/70"} px-4 py-2`}>
+              Email
+            </button>
+            <button onClick={() => setMode("phone")} className={`${mode==="phone"?"btn-green":"bg-white/70"} px-4 py-2`}>
+              Phone
+            </button>
           <button
             onClick={async ()=>{
               setLoading(true)
@@ -127,12 +144,12 @@ export default function Login() {
                 setLoading(false)
               }
             }}
-            className="px-3 py-2 rounded bg-white/60"
+            className="px-4 py-2 btn-green"
           >
             Google
           </button>
         </div>
-        <form onSubmit={onLogin} className="space-y-3">
+          <form onSubmit={onLogin} className="space-y-3">
           {mode==="email" ? (
             <input
               type="email"
@@ -142,7 +159,7 @@ export default function Login() {
                 setIdentifier(e.target.value)
                 setIdError(validateIdentifier(e.target.value))
               }}
-              className="w-full px-4 py-3 rounded bg-white/70"
+              className="w-full input-hero"
               required
             />
           ) : (
@@ -155,7 +172,7 @@ export default function Login() {
                   const v = validatePhone(e.target.value, phoneNumber)
                   setIdError(v)
                 }}
-                className="w-24 px-4 py-3 rounded bg-white/70"
+                className="w-24 input-hero"
                 placeholder="+91"
                 required
               />
@@ -168,7 +185,7 @@ export default function Login() {
                   const v = validatePhone(phoneCode, val)
                   setIdError(v)
                 }}
-                className="flex-1 px-4 py-3 rounded bg-white/70"
+                className="flex-1 input-hero"
                 placeholder="10-digit phone"
                 required
               />
@@ -184,7 +201,7 @@ export default function Login() {
               placeholder="Password"
               value={password}
               onChange={e=>setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded bg-white/70 pr-10"
+              className="w-full input-hero pr-10"
               required
             />
             <button
@@ -205,13 +222,14 @@ export default function Login() {
             <button type="button" onClick={()=>setShowForgot(true)} className="text-sm text-banana-dark">Forgot Password</button>
           </div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
-          <button disabled={loading} className="w-full px-4 py-3 rounded-xl bg-banana text-black font-semibold">
+          <button disabled={loading} className="w-full py-3 btn-orange text-black font-semibold">
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
-        <div className="mt-2 text-sm">
+        <div className="mt-2 text-sm text-center">
           New here?
           <button onClick={() => navigate("/register")} className="ml-1 text-banana-dark">Create Account</button>
+        </div>
         </div>
       </div>
       {showForgot && (

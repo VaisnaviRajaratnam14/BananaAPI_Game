@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react"
 import { withAuth } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
 import bananaImg from "../assets/banana.svg"
+import bgImage from "../assets/backgroundg.jpg"
 
 export default function Game() {
   const { token } = useAuth()
@@ -18,8 +19,8 @@ export default function Game() {
   const [resultMark, setResultMark] = useState("idle")
 
   useEffect(() => {
-    loadPuzzle()
-  }, [mode])
+    if (token) loadPuzzle()
+  }, [mode, token])
 
   useEffect(() => {
     let t = null
@@ -28,14 +29,21 @@ export default function Game() {
   }, [puzzle])
 
   async function loadPuzzle() {
-    setStatus("")
-    setHint("")
-    setAnswer("")
-    setSeconds(0)
-    setSelectedMissing(false)
-    setResultMark("idle")
-    const r = await api.get("/game/puzzle", { params: { difficulty, mode } })
-    setPuzzle(r.data)
+    try {
+      setStatus("")
+      setHint("")
+      setAnswer("")
+      setSeconds(0)
+      setSelectedMissing(false)
+      setResultMark("idle")
+      const r = await api.get("/game/puzzle", { params: { difficulty, mode } })
+      setPuzzle(r.data)
+    } catch (err) {
+      setPuzzle(null)
+      setStatus("Failed to load puzzle")
+      // eslint-disable-next-line no-console
+      console.error("Load puzzle error", err?.response?.status, err?.response?.data || err?.message)
+    }
   }
 
   async function submit() {
@@ -88,9 +96,10 @@ export default function Game() {
   }, [puzzle])
 
   return (
-    <div className="worksheet" style={{ paddingTop: "4rem" }}>
+    <div className="worksheet" style={{ paddingTop: "4rem", minHeight: "100vh", backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}>
       <div style={{ display: "flex", justifyContent: "center" }}>
-        <div style={{ width: "100%", maxWidth: 800, padding: "24px" }}>
+        <div className="border-beam rounded-2xl" style={{ width: "100%", maxWidth: 860 }}>
+          <div className="rounded-2xl" style={{ padding: "24px", background: "rgba(255,255,255,0.9)" }}>
           <div className="title-classic">The Banana Game</div>
           <div className="subtitle-classic">Six Equations</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, marginBottom: 12 }}>
@@ -161,9 +170,9 @@ export default function Game() {
               />
             </div>
           )}
-          <div style={{ marginTop: 8, color: status==="Correct" ? "#2e7d32" : "#d32f2f" }}>{status}</div>
+        </div>
+        </div>
         </div>
       </div>
-    </div>
   )
 }
