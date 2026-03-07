@@ -28,55 +28,83 @@ function makePuzzle(difficulty) {
 
 function makeEquationsPuzzle() {
   const size = 3
-  const N = Array.from({ length: size }, () => Array(size).fill(0))
-  // Seed top two rows and left two columns with 1..9
-  N[0][0] = rand(1, 9)
-  N[0][1] = rand(1, 9)
-  N[1][0] = rand(1, 9)
-  N[1][1] = rand(1, 9)
-  // Row results
-  N[0][2] = N[0][0] + N[0][1]
-  N[1][2] = N[1][0] + N[1][1]
-  // Column results
-  N[2][0] = N[0][0] + N[1][0]
-  N[2][1] = N[0][1] + N[1][1]
-  // Final cell consistent both ways
-  N[2][2] = N[2][0] + N[2][1] // equals N[0][2] + N[1][2]
+  const ops = ["+", "-", "x", "/"]
+  
+  // Row 1: n1 op1 n2 = r1
+  // Row 2: n3 op2 n4 = r2
+  // Vertical equations (always addition in the image):
+  // Col 1: n1 + n3 = v1
+  // Col 2: n2 + n4 = v2
+  // Col 3: r1 + r2 = v3
+  // Row 3: v1 op3 v2 = v3
 
-  const H = 2 * size - 1 // 5
-  const W = 2 * size - 1 // 5
-  const tokens = Array(H * W).fill("")
-  const idx = (r, c) => r * W + c
-  // Place numbers and horizontal operators/equals/results
-  for (let r = 0; r < size; r++) {
-    tokens[idx(r * 2, 0)] = String(N[r][0])
-    tokens[idx(r * 2, 1)] = "+"
-    tokens[idx(r * 2, 2)] = String(N[r][1])
-    tokens[idx(r * 2, 3)] = "="
-    tokens[idx(r * 2, 4)] = String(N[r][2])
-  }
-  // Place vertical operators/equals/results
-  for (let c = 0; c < size; c++) {
-    tokens[idx(1, c * 2)] = "+"
-    tokens[idx(3, c * 2)] = "="
-    tokens[idx(4, c * 2)] = String(N[2][c])
-  }
-  // Choose a missing digit among number cells (avoid operators)
-  const numberPositions = []
-  for (let r = 0; r < H; r++) {
-    for (let c = 0; c < W; c++) {
-      const t = tokens[idx(r, c)]
-      if (t && /^[0-9]+$/.test(t)) numberPositions.push(idx(r, c))
+  let attempts = 0
+  while (attempts < 1000) {
+    attempts++
+    const n1 = rand(10, 500), n2 = rand(2, 100), n3 = rand(10, 500), n4 = rand(2, 100)
+    const op1 = ops[rand(0, 3)], op2 = ops[rand(0, 3)]
+    
+    let r1, r2
+    if (op1 === "+") r1 = n1 + n2
+    else if (op1 === "-") { r1 = n1 - n2; if (r1 <= 0) continue }
+    else if (op1 === "x") { r1 = n1 * n2; if (r1 > 2000) continue }
+    else { if (n1 % n2 !== 0) continue; r1 = n1 / n2 }
+
+    if (op2 === "+") r2 = n3 + n4
+    else if (op2 === "-") { r2 = n3 - n4; if (r2 <= 0) continue }
+    else if (op2 === "x") { r2 = n3 * n4; if (r2 > 2000) continue }
+    else { if (n3 % n4 !== 0) continue; r2 = n3 / n4 }
+
+    // Result row results
+    const v1 = n1 + n3, v2 = n2 + n4, v3 = r1 + r2
+    
+    // Check if any op3 satisfies v1 op3 v2 = v3
+    let op3 = null
+    if (v1 + v2 === v3) op3 = "+"
+    else if (v1 - v2 === v3) op3 = "-"
+    else if (v1 * v2 === v3) op3 = "x"
+    else if (v1 % v2 === 0 && v1 / v2 === v3) op3 = "/"
+    
+    if (op3) {
+      const H = 2 * size - 1 // 5
+      const W = 2 * size - 1 // 5
+      const tokens = Array(H * W).fill("")
+      const idx = (r, c) => r * W + c
+
+      // Row 1
+      tokens[idx(0, 0)] = String(n1); tokens[idx(0, 1)] = op1 === "/" ? "÷" : op1 === "x" ? "×" : op1
+      tokens[idx(0, 2)] = String(n2); tokens[idx(0, 3)] = "="; tokens[idx(0, 4)] = String(r1)
+      // Row 2
+      tokens[idx(2, 0)] = String(n3); tokens[idx(2, 1)] = op2 === "/" ? "÷" : op2 === "x" ? "×" : op2
+      tokens[idx(2, 2)] = String(n4); tokens[idx(2, 3)] = "="; tokens[idx(2, 4)] = String(r2)
+      // Row 3 (Results)
+      tokens[idx(4, 0)] = String(v1); tokens[idx(4, 1)] = op3 === "/" ? "÷" : op3 === "x" ? "×" : op3
+      tokens[idx(4, 2)] = String(v2); tokens[idx(4, 3)] = "="; tokens[idx(4, 4)] = String(v3)
+      // Vertical operators
+      tokens[idx(1, 0)] = "+"; tokens[idx(1, 2)] = "+"; tokens[idx(1, 4)] = "+"
+      tokens[idx(3, 0)] = "="; tokens[idx(3, 2)] = "="; tokens[idx(3, 4)] = "="
+
+      // Choose a missing digit within a number cell
+      const numberPositions = []
+      for (let r = 0; r < H; r++) {
+        for (let c = 0; c < W; c++) {
+          const t = tokens[idx(r, c)]
+          if (t && /^[0-9]+$/.test(t)) numberPositions.push(idx(r, c))
+        }
+      }
+      const posIdx = numberPositions[rand(0, numberPositions.length - 1)]
+      const tokenStr = tokens[posIdx]
+      const digitIdx = rand(0, tokenStr.length - 1)
+      const solution = tokenStr[digitIdx]
+
+      const id = uuidv4()
+      const hint = "Find the missing digit to satisfy all equations"
+      const payload = { id, type: "equations", gridW: W, gridH: H, tokens, missingIndex: posIdx, digitIndex: digitIdx, solution, hint }
+      puzzles.set(id, payload)
+      return payload
     }
   }
-  const missingIndex = numberPositions[rand(0, numberPositions.length - 1)]
-  const solution = tokens[missingIndex]
-  tokens[missingIndex] = ""
-  const id = uuidv4()
-  const hint = "All equations use addition horizontally and vertically"
-  const payload = { id, type: "equations", gridW: W, gridH: H, tokens, missingIndex, solution, hint }
-  puzzles.set(id, payload)
-  return payload
+  return null
 }
 
 function makeThreeDigitsPuzzle() {
@@ -99,6 +127,9 @@ export function puzzle(req, res) {
   if (mode === "equations") p = makeEquationsPuzzle()
   else if (mode === "three" || mode === "threeDigits") p = makeThreeDigitsPuzzle()
   else p = makePuzzle(difficulty)
+  
+  if (!p) return res.status(500).json({ error: "puzzle_generation_failed" })
+  
   emit(Events.GameStarted, { puzzleId: p.id, difficulty })
   res.json(p)
 }

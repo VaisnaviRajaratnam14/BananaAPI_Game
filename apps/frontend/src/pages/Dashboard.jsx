@@ -35,7 +35,7 @@ export default function Dashboard() {
         <span className="text-xl">{muted ? "🔇" : "🔊"}</span>
       </button>
       <button
-        onClick={() => navigate("/game")}
+        onClick={() => navigate("/home")}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10"
         aria-label="Start Quiz"
         title="Start Quiz"

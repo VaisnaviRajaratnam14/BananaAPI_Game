@@ -5,14 +5,17 @@ import Landing from "./pages/Landing"
 import Login from "./pages/Login"
 import Register from "./pages/Register"
 import Otp from "./pages/Otp"
+import SetUsername from "./pages/SetUsername"
 import Dashboard from "./pages/Dashboard"
+import Home from "./pages/Home"
 import Game from "./pages/Game"
 import ThemeSwitcher from "./components/ThemeSwitcher"
 
 function Protected({ children }) {
-  const { token, mfaVerified } = useAuth()
+  const { token, mfaVerified, user } = useAuth()
   if (!token) return <Navigate to="/login" replace />
   if (!mfaVerified) return <Navigate to="/otp" replace />
+  if (!user?.username && window.location.pathname !== "/setup") return <Navigate to="/setup" replace />
   return children
 }
 
@@ -31,7 +34,7 @@ function Nav() {
 
 export default function App() {
   const location = useLocation()
-  const hideNav = location.pathname === "/login"
+  const hideNav = location.pathname === "/login" || location.pathname === "/game" || location.pathname === "/setup" || location.pathname === "/dashboard" || location.pathname === "/home"
   const wrapperClass = `min-h-screen ${hideNav ? "bg-hero" : "bg-animated"}`
   return (
     <AuthProvider>
@@ -42,7 +45,9 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/otp" element={<Otp />} />
+          <Route path="/setup" element={<Protected><SetUsername /></Protected>} />
           <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
+          <Route path="/home" element={<Protected><Home /></Protected>} />
           <Route path="/game" element={<Protected><Game /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
