@@ -3,7 +3,7 @@ import cors from "cors"
 import dotenv from "dotenv"
 import { createServer } from "http"
 import { Server } from "socket.io"
-import { register, login, requireAuth, oauthLogin, forgotStart, forgotVerify, forgotReset } from "./auth.js"
+import { register, login, requireAuth, oauthLogin, forgotStart, forgotVerify, forgotReset, getMe, updateUsername, addScoreToUser } from "./auth.js"
 import { send as sendOtp, verify as verifyOtp } from "./otp.js"
 import { puzzle, submit } from "./game.js"
 import { top, addScore } from "./leaderboard.js"
@@ -21,6 +21,8 @@ app.get("/auth/oauth/:provider", oauthLogin)
 app.post("/auth/forgot/start", forgotStart)
 app.post("/auth/forgot/verify", forgotVerify)
 app.post("/auth/forgot/reset", forgotReset)
+app.get("/auth/me", requireAuth, getMe)
+app.post("/auth/username", requireAuth, updateUsername)
 
 app.post("/otp/send", sendOtp)
 app.post("/otp/verify", verifyOtp)
@@ -28,8 +30,7 @@ app.post("/otp/verify", verifyOtp)
 app.get("/game/puzzle", requireAuth, puzzle)
 app.post("/game/submit", requireAuth, (req, res) => {
   const { earned } = req.body
-  const player = `Player_${req.user.sub.slice(0, 4)}`
-  addScore(player, Math.floor(earned))
+  addScoreToUser(req.user.sub, Math.floor(earned))
   submit(req, res)
 })
 app.get("/leaderboard", requireAuth, top)

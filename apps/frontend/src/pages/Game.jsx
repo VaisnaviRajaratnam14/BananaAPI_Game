@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { withAuth } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
 import bananaImg from "../assets/banana.svg"
 import bgImage from "../assets/backgroundg.jpg"
 
 export default function Game() {
+  const navigate = useNavigate()
   const { token } = useAuth()
   const api = withAuth(token)
   const [puzzle, setPuzzle] = useState(null)
@@ -49,7 +51,7 @@ export default function Game() {
   async function submit() {
     if (!puzzle) return
     const correct = String(puzzle.solution) === String(answer)
-    setStatus(correct ? "Correct" : "Wrong")
+    setStatus(correct ? "Correct" : "Not Correct")
     setResultMark(correct ? "correct" : "wrong")
     if (correct) {
       const earned = Math.max(10, 100 - seconds)
@@ -96,83 +98,116 @@ export default function Game() {
   }, [puzzle])
 
   return (
-    <div className="worksheet" style={{ paddingTop: "4rem", minHeight: "100vh", backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}>
-      <div style={{ display: "flex", justifyContent: "center" }}>
-        <div className="border-beam rounded-2xl" style={{ width: "100%", maxWidth: 860 }}>
-          <div className="rounded-2xl" style={{ padding: "24px", background: "rgba(255,255,255,0.9)" }}>
-          <div className="title-classic">The Banana Game</div>
-          <div className="subtitle-classic">Six Equations</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 12, marginBottom: 12 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <select value={mode} onChange={e=>setMode(e.target.value)} className="input-classic">
-                <option value="equations">Six Equations</option>
-                <option value="three">3-Digit Find</option>
-                <option value="">Classic Grid</option>
-              </select>
-              <select value={difficulty} onChange={e=>setDifficulty(e.target.value)} className="input-classic">
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
-              </select>
-            </div>
-            <button onClick={loadPuzzle} className="btn-classic">New Puzzle</button>
-          </div>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            {puzzle?.type === "equations" && (
-              <div className="eq-grid" style={{ gridTemplateColumns: `repeat(${puzzle.gridW}, 64px)` }}>
-                {grid.map((row, ri) =>
-                  row.map((cell, ci) => {
-                    const idx = ri * puzzle.gridW + ci
-                    const isOp = ["+", "=", "x", "×", "-", "−"].includes(cell.v)
-                    const classes = ["eq-cell"]
-                    if (ci === puzzle.gridW - 1) classes.push("last-col")
-                    if (ri === puzzle.gridH - 1) classes.push("last-row")
-                    if (cell.missing && selectedMissing) classes.push("eq-selected")
-                    if (cell.missing && resultMark === "correct") classes.push("eq-correct")
-                    if (cell.missing && resultMark === "wrong") classes.push("eq-wrong")
-                    return (
-                      <div
-                        key={`${ri}-${ci}`}
-                        className={classes.join(" ")}
-                        onClick={() => { if (cell.missing) setSelectedMissing(true) }}
-                      >
-                        {cell.missing ? (
-                          <div className="banana-cell"><img src={bananaImg} alt="" /></div>
-                        ) : isOp ? (
-                          <div className="eq-op">{cell.v}</div>
-                        ) : (
-                          <div className="eq-number">{cell.v}</div>
-                        )}
-                      </div>
-                    )
-                  })
-                )}
+    <div className="min-h-screen relative" style={{ backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+      {/* Back Button in Corner */}
+      <button 
+        onClick={() => navigate("/dashboard")} 
+        className="absolute top-4 left-4 px-4 py-2 bg-white/80 hover:bg-white rounded-lg shadow-sm font-semibold text-banana-dark z-20 flex items-center gap-2"
+      >
+        <span>←</span> Back
+      </button>
+
+      <div className="flex items-center justify-center min-h-screen px-4 py-8">
+        <div className="border-beam rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl">
+          <div className="bg-white p-4 md:p-6 min-h-[400px] flex flex-col">
+            
+            {/* Header section matching the image */}
+            <div className="mb-4">
+              <h1 className="text-2xl md:text-4xl font-bold text-blue-600 mb-1">The Banana Game</h1>
+              <div className="flex gap-10 items-center text-red-800/60 font-serif text-sm">
+                <span>Six Equations</span>
+                <span>www.sanfoh.com</span>
               </div>
-            )}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
-            <div>Timer {seconds}s</div>
-            <div>Score {score}</div>
-            <button onClick={revealHint} className="btn-classic">Hint</button>
-            <button onClick={submit} className="btn-classic">Submit</button>
-          </div>
-          <div style={{ marginTop: 8 }}>{hint}</div>
-          <div style={{ marginTop: 12, fontSize: 18 }}>Quest is ready.</div>
-          {puzzle?.type === "equations" && (
-            <div style={{ marginTop: 8 }}>
-              <div style={{ marginBottom: 6 }}>Enter the missing digit:</div>
-              <input
-                inputMode="numeric"
-                value={answer}
-                onChange={e=>setAnswer(e.target.value.replace(/\D/g,""))}
-                className="input-classic"
-                style={{ width: 120 }}
-              />
             </div>
-          )}
-        </div>
-        </div>
+
+            {/* The Grid area */}
+            <div className="flex-1 flex items-center justify-center my-4">
+              {puzzle?.type === "equations" && (
+                <div 
+                  className="grid gap-0 bg-white border border-gray-100 shadow-sm" 
+                  style={{ 
+                    gridTemplateColumns: `repeat(${puzzle.gridW}, minmax(40px, 1fr))`,
+                    maxWidth: "600px",
+                    width: "100%"
+                  }}
+                >
+                  {grid.map((row, ri) =>
+                    row.map((cell, ci) => {
+                      const isOp = ["+", "=", "x", "×", "-", "−", "÷"].includes(cell.v)
+                      
+                      return (
+                        <div
+                          key={`${ri}-${ci}`}
+                          className={`
+                            aspect-square flex items-center justify-center text-2xl md:text-4xl font-bold border-[0.5px] border-gray-100
+                            ${cell.missing && selectedMissing ? "bg-yellow-50/50" : ""}
+                          `}
+                          onClick={() => { if (cell.missing) setSelectedMissing(true) }}
+                        >
+                          {isOp ? (
+                            <div className="text-red-500">{cell.v}</div>
+                          ) : (
+                            <div className="text-blue-600 tracking-[0.5em] flex items-center justify-center w-full">
+                              {cell.v.split("").map((digit, di) => {
+                                const isMissingDigit = cell.missing && di === puzzle.digitIndex
+                                return (
+                                  <span key={di} className="relative inline-flex items-center justify-center">
+                                    {isMissingDigit ? (
+                                      <img src={bananaImg} alt="?" className="w-8 h-8 md:w-10 md:h-10 animate-pulse mx-[-0.2em]" />
+                                    ) : (
+                                      digit
+                                    )}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer section matching the image */}
+            <div className="mt-auto pt-4 text-left">
+              {status && (
+                <div className={`mb-4 text-xl font-bold italic ${status==="Correct" ? "text-green-600" : "text-black"}`}>
+                  {status}!
+                </div>
+              )}
+
+              <div className="text-lg font-bold text-black mb-3 italic">Quest is ready.</div>
+              
+              <div className="flex flex-col md:flex-row items-center gap-3">
+                <div className="text-base font-bold text-black flex items-center gap-2">
+                  Enter the missing digit:
+                  <input
+                    inputMode="numeric"
+                    value={answer}
+                    onChange={e=>setAnswer(e.target.value.replace(/\D/g,""))}
+                    className="w-16 h-10 text-xl text-center rounded-lg bg-gradient-to-r from-orange-400 to-red-400 text-white font-bold border-none shadow-sm focus:ring-4 ring-orange-200 outline-none"
+                    autoFocus
+                  />
+                </div>
+                
+                <div className="flex gap-2 ml-auto">
+                  <button onClick={revealHint} className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold rounded-lg text-xs transition-colors">Hint</button>
+                  <button onClick={submit} className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg text-xs shadow-md transition-all active:scale-95">Submit</button>
+                  <button onClick={loadPuzzle} className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-lg text-xs transition-colors">New Puzzle</button>
+                </div>
+              </div>
+              
+              <div className="mt-3 flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                <span>Timer: {seconds}s</span>
+                <span>Score: {score}</span>
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
+    </div>
   )
 }

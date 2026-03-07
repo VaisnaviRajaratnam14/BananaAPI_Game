@@ -34,7 +34,22 @@ export function register(req, res) {
   }
   if (users.has(key)) return res.status(400).json({ error: "exists" })
   const hash = bcrypt.hashSync(password, 10)
-  users.set(key, { id: uuidv4(), mode, identifier, hash, roles: ["Player"] })
+  users.set(key, { 
+    id: uuidv4(), 
+    mode, 
+    identifier, 
+    hash, 
+    roles: ["Player"],
+    username: "",
+    stats: {
+      score: 0,
+      diamonds: 500,
+      energy: 0,
+      streak: 0,
+      level: 1,
+      rank: "Novice"
+    }
+  })
   res.json({ ok: true })
 }
 
@@ -107,7 +122,22 @@ export function oauthLogin(req, res) {
   let user = users.get(key)
   if (!user) {
     const hash = bcrypt.hashSync(uuidv4(), 10)
-    user = { id: uuidv4(), mode: "email", identifier: email, hash, roles: ["Player"] }
+    user = { 
+      id: uuidv4(), 
+      mode: "email", 
+      identifier: email, 
+      hash, 
+      roles: ["Player"],
+      username: "",
+      stats: {
+        score: 0,
+        diamonds: 500,
+        energy: 0,
+        streak: 0,
+        level: 1,
+        rank: "Novice"
+      }
+    }
     users.set(key, user)
   }
   const loginTokenId = uuidv4()
@@ -155,4 +185,44 @@ export function forgotReset(req, res) {
   user.hash = bcrypt.hashSync(newPassword, 10)
   resets.delete(resetId)
   res.json({ ok: true })
+}
+
+export function getMe(req, res) {
+  const userId = req.user.sub
+  const user = Array.from(users.values()).find(u => u.id === userId)
+  if (!user) return res.status(404).json({ error: "not_found" })
+  
+  const { hash, ...publicUser } = user
+  res.json(publicUser)
+}
+
+export function updateUsername(req, res) {
+  const userId = req.user.sub
+  const { username } = req.body
+  if (!username) return res.status(400).json({ error: "missing_username" })
+  
+  const user = Array.from(users.values()).find(u => u.id === userId)
+  if (!user) return res.status(404).json({ error: "not_found" })
+  
+  // Check if username already exists for another user
+  const exists = Array.from(users.values()).some(u => u.username === username && u.id !== userId)
+  if (exists) return res.status(400).json({ error: "username_taken" })
+  
+  user.username = username
+  const { hash, ...publicUser } = user
+  res.json(publicUser)
+}
+
+export function addScoreToUser(userId, earned) {
+  const user = Array.from(users.values()).find(u => u.id === userId)
+  if (user) {
+    user.stats.score += earned
+    // Every 1000 score, increase level
+    user.stats.level = Math.floor(user.stats.score / 1000) + 1
+    // Simple rank system
+    if (user.stats.score > 10000) user.stats.rank = "Grandmaster"
+    else if (user.stats.score > 5000) user.stats.rank = "Master"
+    else if (user.stats.score > 2000) user.stats.rank = "Expert"
+    else if (user.stats.score > 1000) user.stats.rank = "Apprentice"
+  }
 }

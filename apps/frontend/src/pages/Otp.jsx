@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { api } from "../utils/api"
+import { api, withAuth } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
 
 export default function Otp() {
   const navigate = useNavigate()
-  const { setToken, setMfaVerified } = useAuth()
+  const { setToken, setMfaVerified, setUser } = useAuth()
   const [otp, setOtp] = useState("")
   const [seconds, setSeconds] = useState(60)
   const [sending, setSending] = useState(false)
@@ -51,6 +51,12 @@ export default function Otp() {
       const { jwt } = res.data
       setToken(jwt)
       setMfaVerified(true)
+
+      // Fetch profile to populate user context
+      const authApi = withAuth(jwt)
+      const userRes = await authApi.get("/auth/me")
+      setUser(userRes.data)
+
       navigate("/dashboard")
     } catch {
       setError("Invalid code")

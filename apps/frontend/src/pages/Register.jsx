@@ -53,17 +53,19 @@ export default function Register() {
     setLoading(true)
     try {
       await api.post("/auth/register", { mode, identifier, password })
+      
+      // Auto-login after registration
+      const r = await api.post("/auth/login", { mode, identifier, password, remember: true })
+      const { loginTokenId } = r.data
+      sessionStorage.setItem("loginTokenId", loginTokenId)
+      sessionStorage.setItem("loginMode", mode)
+      
       if (saveCreds && mode === "email") {
         localStorage.setItem("savedEmail", identifier)
         sessionStorage.setItem("savedPassword", password)
-        const r = await api.post("/auth/login", { mode, identifier, password, remember: true })
-        const { loginTokenId } = r.data
-        sessionStorage.setItem("loginTokenId", loginTokenId)
-        setSuccess(false)
-        navigate("/otp")
-      } else {
-        setSuccess(true)
       }
+      
+      navigate("/otp")
     } catch (err) {
       const msg = err?.response?.data?.error
       if (msg === "weak_password") setError("Password too weak (min 8 chars, include letters)")
