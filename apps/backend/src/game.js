@@ -1,10 +1,31 @@
 import { v4 as uuidv4 } from "uuid"
+import axios from "axios"
 import { emit, Events } from "./events.js"
 
 const puzzles = new Map()
 
 function rand(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+async function makeExternalBananaPuzzle() {
+  try {
+    const res = await axios.get("https://marcconrad.com/uob/banana/api.php?out=json")
+    const { question, solution } = res.data
+    const id = uuidv4()
+    const payload = { 
+      id, 
+      type: "external", 
+      question, 
+      solution: String(solution), 
+      hint: "Find the missing digit in the image!" 
+    }
+    puzzles.set(id, payload)
+    return payload
+  } catch (err) {
+    console.error("External Banana API Error", err.message)
+    return null
+  }
 }
 
 function makePuzzle(difficulty) {
@@ -121,10 +142,10 @@ function makeThreeDigitsPuzzle() {
   return payload
 }
 
-export function puzzle(req, res) {
+export async function puzzle(req, res) {
   const { difficulty = "easy", mode } = req.query
   let p = null
-  if (mode === "equations") p = makeEquationsPuzzle()
+  if (mode === "equations") p = await makeExternalBananaPuzzle()
   else if (mode === "three" || mode === "threeDigits") p = makeThreeDigitsPuzzle()
   else p = makePuzzle(difficulty)
   
