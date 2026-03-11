@@ -13,7 +13,18 @@ dotenv.config({ path: "../../.env" })
 
 const app = express()
 app.use(express.json())
-app.use(cors({ origin: process.env.CORS_ORIGIN || "http://localhost:5173", credentials: true }))
+// Allow both 5173 and 5174 for development
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"]
+app.use(cors({ 
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error("Not allowed by CORS"))
+    }
+  }, 
+  credentials: true 
+}))
 
 app.post("/auth/register", register)
 app.post("/auth/login", login)
@@ -52,4 +63,6 @@ on(Events.ScoreUpdated, e => {})
 on(Events.AchievementUnlocked, e => {})
 
 const port = Number(process.env.PORT_BACKEND || 5080)
-httpServer.listen(port, () => {})
+httpServer.listen(port, () => {
+  console.log(`Backend server listening on port ${port}`)
+})

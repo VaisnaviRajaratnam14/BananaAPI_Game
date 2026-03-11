@@ -24,10 +24,20 @@ export function AuthProvider({ children }) {
     else localStorage.removeItem("user")
   }, [user])
 
+  const logout = () => {
+    setToken("")
+    setMfaVerified(false)
+    setUser(null)
+    localStorage.removeItem("jwt")
+    localStorage.removeItem("mfaVerified")
+    localStorage.removeItem("user")
+  }
+
   const value = useMemo(() => ({ 
     token, setToken, 
     mfaVerified, setMfaVerified,
-    user, setUser
+    user, setUser,
+    logout
   }), [token, mfaVerified, user])
   
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

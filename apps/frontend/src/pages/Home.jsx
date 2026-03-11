@@ -43,40 +43,47 @@ export default function Home() {
 
         <div className="flex items-center gap-4 text-sm font-bold">
           {/* Diamonds */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400">
-            <div className="w-5 h-5 bg-emerald-500 rounded-md flex items-center justify-center">
-              <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 2a1 1 0 01.894.553l1.992 3.985 4.39.638a1 1 0 01.554 1.706l-3.177 3.097.75 4.373a1 1 0 01-1.451 1.054L10 15.347l-3.961 2.081a1 1 0 01-1.451-1.054l.75-4.373-3.177-3.097a1 1 0 01.554-1.706l4.39-.638 1.992-3.985A1 1 0 0110 2z" clipRule="evenodd" />
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0e2a26] border border-[#1d4d46] rounded-full text-[#22c55e]">
+            <div className="w-7 h-7 bg-[#22c55e] rounded-lg flex items-center justify-center shadow-lg">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
             </div>
-            <span>{stats.diamonds}</span>
+            <span className="text-lg font-black">{stats.diamonds}</span>
           </div>
 
           {/* Energy */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-400">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-            </svg>
-            <span>{stats.energy}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a2118] border border-[#4d3a2a] rounded-full text-[#f97316]">
+            <div className="w-7 h-7 bg-[#f97316] rounded-lg flex items-center justify-center shadow-lg">
+              <svg className="w-5 h-5 text-[#2a2118]" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <span className="text-lg font-black">{stats.energy}</span>
           </div>
 
           {/* Streak */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-500/10 border border-rose-500/20 rounded-full text-rose-400">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.334-.398-1.817a1 1 0 00-1.414-.914c-1.032.479-1.818 1.42-2.115 2.503-.16.588-.223 1.159-.223 1.64 0 2.445 1.556 4.605 3.703 5.19a7.003 7.003 0 018.674-6.2c-.185-.345-.453-.652-.782-.923a.997.997 0 01-.314-.733c0-.146.02-.294.06-.437.056-.204.19-.46.339-.735.148-.274.312-.574.441-.873.13-.3.213-.6.213-.862a1 1 0 00-.601-.91zM14.93 18.84a4.996 4.996 0 01-3.015-1.815 1.1 1.1 0 01.011-1.408 1.1 1.1 0 011.405-.011 2.992 2.992 0 004.108-.209 1.1 1.1 0 011.558 1.556 4.993 4.993 0 01-4.067 1.887z" clipRule="evenodd" />
-            </svg>
-            <span>{stats.streak}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a1a1e] border border-[#4d262a] rounded-full text-[#ef4444]">
+            <div className="w-7 h-7 bg-[#ef4444] rounded-lg flex items-center justify-center shadow-lg bg-opacity-20">
+              <svg className="w-5 h-5 text-[#ef4444]" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.334-.398-1.817a1 1 0 00-1.414-.914c-1.032.479-1.818 1.42-2.115 2.503-.16.588-.223 1.159-.223 1.64 0 2.445 1.556 4.605 3.703 5.19a7.003 7.003 0 018.674-6.2c-.185-.345-.453-.652-.782-.923a.997.997 0 01-.314-.733c0-.146.02-.294.06-.437.056-.204.19-.46.339-.735.148-.274.312-.574.441-.873.13-.3.213-.6.213-.862a1 1 0 00-.601-.91zM14.93 18.84a4.996 4.996 0 01-3.015-1.815 1.1 1.1 0 01.011-1.408 1.1 1.1 0 011.405-.011 2.992 2.992 0 004.108-.209 1.1 1.1 0 011.558 1.556 4.993 4.993 0 01-4.067 1.887z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <span className="text-lg font-black">{stats.streak}</span>
           </div>
 
           {/* User Profile */}
-          <div className="flex items-center gap-3 pl-4 border-l border-slate-700">
-            <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center overflow-hidden border-2 border-slate-600">
+          <div 
+            onClick={() => navigate("/account")}
+            className="flex items-center gap-3 pl-4 border-l border-slate-700 cursor-pointer group hover:bg-slate-700/50 transition-colors"
+          >
+            <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center overflow-hidden border-2 border-slate-600 group-hover:border-white transition-colors">
               <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="flex flex-col">
-              <span className="text-white text-xs font-black uppercase tracking-tight">{user?.username || "Guest"}</span>
+              <span className="text-white text-xs font-black uppercase tracking-tight group-hover:text-pink-400 transition-colors">{user?.username || "Guest"}</span>
               <span className="text-pink-500 text-[10px] font-bold uppercase tracking-widest">{stats.rank}</span>
             </div>
           </div>
