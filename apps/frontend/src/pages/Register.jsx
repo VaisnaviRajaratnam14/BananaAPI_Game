@@ -13,156 +13,128 @@ function strengthLabel(pw) {
 
 export default function Register() {
   const navigate = useNavigate()
-  const [mode, setMode] = useState("email")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [identifier, setIdentifier] = useState("")
-  const [idError, setIdError] = useState("")
   const [password, setPassword] = useState("")
-  const [showPw, setShowPw] = useState(false)
-  const [confirm, setConfirm] = useState("")
-  const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [saveCreds, setSaveCreds] = useState(false)
-
-  function validateIdentifier(id) {
-    if (mode !== "email") return ""
-    if (!id.includes("@")) return "Email must contain @"
-    const parts = id.split("@")
-    if (parts.length !== 2) return "Invalid email"
-    const domain = parts[1].toLowerCase()
-    if (domain.includes("gmail") && !domain.endsWith("gmail.com")) return "Gmail domain must be gmail.com"
-    return ""
-  }
 
   async function onSubmit(e) {
     e.preventDefault()
     setError("")
-    const v = validateIdentifier(identifier)
-    setIdError(v)
-    if (v) return
-    const strongEnough = password.length >= 8 && /[A-Za-z]/.test(password)
-    if (!strongEnough) {
-      setError("Password must be at least 8 characters and include letters")
-      return
-    }
-    if (password !== confirm) {
-      setError("Passwords do not match")
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters")
       return
     }
     setLoading(true)
     try {
-      await api.post("/auth/register", { mode, identifier, password })
+      await api.post("/auth/register", { 
+        mode: "email", 
+        identifier, 
+        password,
+        firstName,
+        lastName
+      })
       
-      // Auto-login after registration
-      const r = await api.post("/auth/login", { mode, identifier, password, remember: true })
-      const { loginTokenId } = r.data
-      sessionStorage.setItem("loginTokenId", loginTokenId)
-      sessionStorage.setItem("loginMode", mode)
-      
-      if (saveCreds && mode === "email") {
-        localStorage.setItem("savedEmail", identifier)
-        sessionStorage.setItem("savedPassword", password)
-      }
-      
+      const r = await api.post("/auth/login", { mode: "email", identifier, password, remember: true })
+      sessionStorage.setItem("loginTokenId", r.data.loginTokenId)
+      sessionStorage.setItem("loginMode", "email")
       navigate("/otp")
     } catch (err) {
-      const msg = err?.response?.data?.error
-      if (msg === "weak_password") setError("Password too weak (min 8 chars, include letters)")
-      else if (msg === "exists") setError("Account already exists")
-      else if (msg === "invalid_email") setError("Invalid email address")
-      else setError("Registration failed")
+      setError(err?.response?.data?.error === "exists" ? "Account already exists" : "Registration failed")
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="glass p-8 rounded-2xl w-full max-w-md">
-        <div className="mb-4 text-xl">Create Account</div>
-        <div className="flex gap-2 mb-6">
-          <button onClick={() => setMode("email")} className={`px-3 py-2 rounded ${mode==="email"?"bg-banana text-black":"bg-white/60"}`}>Email</button>
-          <button onClick={() => setMode("phone")} className={`px-3 py-2 rounded ${mode==="phone"?"bg-banana text-black":"bg-white/60"}`}>Phone</button>
+    <div className="min-h-screen flex items-center justify-center bg-[#a8d18d] p-4 font-mono">
+      {/* Cartoon Wood Container */}
+      <div className="relative w-full max-w-lg bg-[#8b5a2b] p-8 rounded-[3rem] border-8 border-[#5d3a1a] shadow-[0_20px_0_0_#3d2611] overflow-visible">
+        
+        {/* Close Button Style Circle */}
+        <div 
+          onClick={() => navigate("/")}
+          className="absolute -top-4 -right-4 w-12 h-12 bg-red-500 border-4 border-white rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:bg-red-600 transition-colors z-10"
+        >
+          <span className="text-white text-2xl font-bold">×</span>
         </div>
-        <form onSubmit={onSubmit} className="space-y-3">
-          <input
-            type={mode==="phone"?"tel":"email"}
-            placeholder={mode==="phone"?"Phone number":"Email"}
-            value={identifier}
-            onChange={e=>{
-              setIdentifier(e.target.value)
-              setIdError(validateIdentifier(e.target.value))
-            }}
-            className="w-full px-4 py-3 rounded bg-white/70"
-            required
-          />
-          {idError && <div className="text-red-600 text-sm">{idError}</div>}
-          <div className="relative">
-            <input
-              type={showPw ? "text" : "password"}
-              placeholder="Password (min 8 characters)"
-              value={password}
-              onChange={e=>setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded bg-white/70 pr-10"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowPw(s=>!s)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
-              aria-label="Toggle password"
-              title="Show password"
-            >
-              <span className="text-xl">{showPw ? "🙈" : "👁️"}</span>
-            </button>
-          </div>
-          <div className={`text-sm ${strengthLabel(password)==="Strong"?"text-green-700":"text-red-700"}`}>
-            {strengthLabel(password)}
-          </div>
-          <div className="relative">
-            <input
-              type={showConfirm ? "text" : "password"}
-              placeholder="Confirm Password"
-              value={confirm}
-              onChange={e=>setConfirm(e.target.value)}
-              className="w-full px-4 py-3 rounded bg-white/70 pr-10"
-              required
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm(s=>!s)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
-              aria-label="Toggle password"
-              title="Show password"
-            >
-              <span className="text-xl">{showConfirm ? "🙈" : "👁️"}</span>
-            </button>
-          </div>
-          {error && <div className="text-red-600 text-sm">{error}</div>}
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={saveCreds} onChange={e=>setSaveCreds(e.target.checked)} />
-            <span>Save email and password for quick login</span>
-          </label>
-          <button disabled={loading} className="w-full px-4 py-3 rounded-xl bg-banana text-black font-semibold">
-            {loading ? "Creating..." : "Create Account"}
-          </button>
-        </form>
-        <div className="mt-2 text-sm">
-          Already have an account?
-          <button onClick={() => navigate("/login")} className="ml-1 text-banana-dark">Login</button>
-        </div>
-      </div>
-      {success && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40">
-          <div className="glass p-6 rounded-2xl w-full max-w-sm text-center">
-            <div className="text-xl mb-2">Account is succesfully create</div>
-            <div className="text-black/70 mb-4">You can login now</div>
-            <div className="flex gap-2 justify-center">
-              <button onClick={() => { setSuccess(false); navigate("/login") }} className="px-4 py-2 rounded bg-banana text-black">Go to Login</button>
+
+        {/* Decorative cracks/marks */}
+        <div className="absolute top-10 left-0 w-4 h-1 bg-[#5d3a1a] opacity-30"></div>
+        <div className="absolute top-20 right-0 w-6 h-1 bg-[#5d3a1a] opacity-30"></div>
+        <div className="absolute bottom-20 left-0 w-5 h-1 bg-[#5d3a1a] opacity-30"></div>
+
+        <form onSubmit={onSubmit} className="space-y-6 relative z-0">
+          {/* Name Row */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="FIRST NAME"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value.toUpperCase())}
+                className="w-full bg-[#e8e8e8] text-[#5d3a1a] placeholder-[#8b5a2b]/50 px-6 py-4 rounded-2xl border-4 border-[#5d3a1a] shadow-[inset_0_4px_0_0_rgba(0,0,0,0.1)] outline-none font-black italic tracking-tighter"
+                required
+              />
+            </div>
+            <div className="flex-1">
+              <input
+                type="text"
+                placeholder="LAST NAME"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value.toUpperCase())}
+                className="w-full bg-[#e8e8e8] text-[#5d3a1a] placeholder-[#8b5a2b]/50 px-6 py-4 rounded-2xl border-4 border-[#5d3a1a] shadow-[inset_0_4px_0_0_rgba(0,0,0,0.1)] outline-none font-black italic tracking-tighter"
+                required
+              />
             </div>
           </div>
-        </div>
+
+          {/* Email Field */}
+          <div>
+            <input
+              type="email"
+              placeholder="EMAIL"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              className="w-full bg-[#e8e8e8] text-[#5d3a1a] placeholder-[#8b5a2b]/50 px-6 py-4 rounded-2xl border-4 border-[#5d3a1a] shadow-[inset_0_4px_0_0_rgba(0,0,0,0.1)] outline-none font-black italic tracking-tighter"
+              required
+            />
+          </div>
+
+          {/* Password Field */}
+          <div>
+            <input
+              type="password"
+              placeholder="PASSWORD"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-[#e8e8e8] text-[#5d3a1a] placeholder-[#8b5a2b]/50 px-6 py-4 rounded-2xl border-4 border-[#5d3a1a] shadow-[inset_0_4px_0_0_rgba(0,0,0,0.1)] outline-none font-black italic tracking-tighter"
+              required
+            />
+          </div>
+
+          {/* Terms text */}
+          <p className="text-white text-[10px] md:text-xs text-center font-bold italic leading-tight uppercase px-4">
+            By clicking below to sign up, you are agreeing to our terms of service and privacy policy
+          </p>
+
+          {error && <p className="text-red-300 text-center font-bold text-xs">{error}</p>}
+
+          {/* Submit Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#4ba334] hover:bg-[#5bbd41] disabled:opacity-50 text-white font-black italic py-5 rounded-3xl border-4 border-[#2d661e] shadow-[0_8px_0_0_#2d661e] transition-all active:translate-y-1 active:shadow-[0_4px_0_0_#2d661e] uppercase tracking-wider text-xl md:text-2xl"
+          >
+            {loading ? "WAITING..." : "Create my account"}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
       )}
     </div>
   )
