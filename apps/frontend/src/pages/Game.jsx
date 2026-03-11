@@ -252,6 +252,12 @@ export default function Game() {
 
             {/* The Grid area */}
             <div className="flex-1 flex items-center justify-center my-4">
+              {puzzle?.type === "external" && (
+                <div className="w-full max-w-lg bg-white p-2 rounded-lg shadow-sm border border-gray-100">
+                  <img src={puzzle.question} alt="Banana Puzzle" className="w-full h-auto object-contain" />
+                </div>
+              )}
+
               {puzzle?.type === "equations" && (
                 <div 
                   className="grid gap-0 bg-white border border-gray-100 shadow-sm" 
