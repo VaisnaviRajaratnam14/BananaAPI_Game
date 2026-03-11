@@ -9,6 +9,7 @@ import SetUsername from "./pages/SetUsername"
 import Dashboard from "./pages/Dashboard"
 import Home from "./pages/Home"
 import Game from "./pages/Game"
+import Account from "./pages/Account"
 import ThemeSwitcher from "./components/ThemeSwitcher"
 
 function Protected({ children }) {
@@ -19,19 +20,6 @@ function Protected({ children }) {
   return children
 }
 
-function Nav() {
-  return (
-    <div className="fixed top-0 left-0 right-0 p-3 flex justify-between items-center">
-      <Link to="/" className="font-bold text-banana-dark">Banana Puzzle</Link>
-      <div className="flex gap-2">
-        <Link to="/dashboard" className="px-3 py-1 rounded bg-white/60">Dashboard</Link>
-        <Link to="/game" className="px-3 py-1 rounded bg-white/60">Play</Link>
-        <ThemeSwitcher />
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
   const location = useLocation()
   const hideNav = location.pathname === "/login" || location.pathname === "/game" || location.pathname === "/setup" || location.pathname === "/dashboard" || location.pathname === "/home"
@@ -39,7 +27,6 @@ export default function App() {
   return (
     <AuthProvider>
       <div className={wrapperClass}>
-        {!hideNav && <Nav />}
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
@@ -49,6 +36,7 @@ export default function App() {
           <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
           <Route path="/home" element={<Protected><Home /></Protected>} />
           <Route path="/game" element={<Protected><Game /></Protected>} />
+          <Route path="/account" element={<Protected><Account /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

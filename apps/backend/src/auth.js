@@ -17,16 +17,27 @@ function phoneKey(raw) {
 export function register(req, res) {
   const { mode, identifier, password, firstName, lastName } = req.body
   if (!identifier || !password) return res.status(400).json({ error: "invalid" })
-  const valid = password.length >= 8
-  if (!valid) return res.status(400).json({ error: "weak_password" })
   
-  let key = `${mode}:${identifier}`
+  // Normalize email to lowercase
+  const normalizedIdentifier = identifier.toLowerCase()
+  
+  // Backend password validation matching frontend requirements
+  const hasUpperCase = /[A-Z]/.test(password)
+  const hasLowerCase = /[a-z]/.test(password)
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password)
+  const isCommonPattern = /123456|password|qwerty/i.test(password)
+
+  if (password.length < 8 || !hasUpperCase || !hasLowerCase || !hasSpecialChar || isCommonPattern) {
+    return res.status(400).json({ error: "weak_password" })
+  }
+  
+  let key = `${mode}:${normalizedIdentifier}`
   if (users.has(key)) return res.status(400).json({ error: "exists" })
   const hash = bcrypt.hashSync(password, 10)
   users.set(key, { 
     id: uuidv4(), 
     mode, 
-    identifier, 
+    identifier: normalizedIdentifier, 
     hash, 
     roles: ["Player"],
     firstName: firstName || "",
@@ -46,7 +57,8 @@ export function register(req, res) {
 
 export function login(req, res) {
   const { mode, identifier, password, remember } = req.body
-  let key = `${mode}:${identifier}`
+  const normalizedIdentifier = identifier.toLowerCase()
+  let key = `${mode}:${normalizedIdentifier}`
   if (mode === "phone") {
     const pk = phoneKey(identifier)
     if (!pk) return res.status(400).json({ error: "invalid_phone" })
