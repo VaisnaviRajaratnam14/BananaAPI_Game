@@ -15,23 +15,12 @@ function phoneKey(raw) {
 }
 
 export function register(req, res) {
-  const { mode, identifier, password } = req.body
+  const { mode, identifier, password, firstName, lastName } = req.body
   if (!identifier || !password) return res.status(400).json({ error: "invalid" })
-  const valid = password.length >= 8 && /[A-Za-z]/.test(password)
+  const valid = password.length >= 8
   if (!valid) return res.status(400).json({ error: "weak_password" })
-  if (mode === "email") {
-    if (!identifier.includes("@")) return res.status(400).json({ error: "invalid_email" })
-    const parts = identifier.split("@")
-    if (parts.length !== 2) return res.status(400).json({ error: "invalid_email" })
-    const domain = parts[1].toLowerCase()
-    if (domain.includes("gmail") && !domain.endsWith("gmail.com")) return res.status(400).json({ error: "invalid_email" })
-  }
+  
   let key = `${mode}:${identifier}`
-  if (mode === "phone") {
-    const pk = phoneKey(identifier)
-    if (!pk) return res.status(400).json({ error: "invalid_phone" })
-    key = pk
-  }
   if (users.has(key)) return res.status(400).json({ error: "exists" })
   const hash = bcrypt.hashSync(password, 10)
   users.set(key, { 
@@ -40,6 +29,8 @@ export function register(req, res) {
     identifier, 
     hash, 
     roles: ["Player"],
+    firstName: firstName || "",
+    lastName: lastName || "",
     username: "",
     stats: {
       score: 0,
