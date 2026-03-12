@@ -49,7 +49,9 @@ export function register(req, res) {
       energy: 0,
       streak: 0,
       level: 1,
-      rank: "Novice"
+      rank: "Novice",
+      gifts: 0,
+      levelStars: {}
     }
   })
   res.json({ ok: true })
@@ -138,7 +140,8 @@ export function oauthLogin(req, res) {
         energy: 0,
         streak: 0,
         level: 1,
-        rank: "Novice"
+        rank: "Novice",
+        gifts: 0
       }
     }
     users.set(key, user)
@@ -212,6 +215,48 @@ export function updateUsername(req, res) {
   if (exists) return res.status(400).json({ error: "username_taken" })
   
   user.username = username
+  const { hash, ...publicUser } = user
+  res.json(publicUser)
+}
+
+export function getLeaderboard(req, res) {
+  const allUsers = Array.from(users.values())
+  const sorted = allUsers
+    .map(u => ({
+      id: u.id,
+      username: u.username || "Guest",
+      score: u.stats.score,
+      rank: u.stats.rank,
+      level: u.stats.level
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10) // Top 10
+  
+  res.json(sorted)
+}
+
+export function collectRewards(req, res) {
+  const userId = req.user.sub
+  const { diamonds = 0, gifts = 0, level = 1, stars = 0 } = req.body
+  
+  const user = Array.from(users.values()).find(u => u.id === userId)
+  if (!user) return res.status(404).json({ error: "not_found" })
+  
+  user.stats.diamonds += diamonds
+  user.stats.gifts += gifts
+  
+  // Track stars per level
+  if (!user.stats.levelStars) user.stats.levelStars = {}
+  const currentStars = user.stats.levelStars[level] || 0
+  if (stars > currentStars) {
+    user.stats.levelStars[level] = stars
+  }
+  
+  // Advance level if the completed level is the current level
+  if (level === user.stats.level) {
+    user.stats.level += 1
+  }
+  
   const { hash, ...publicUser } = user
   res.json(publicUser)
 }

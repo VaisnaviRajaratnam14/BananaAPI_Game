@@ -9,6 +9,8 @@ import SetUsername from "./pages/SetUsername"
 import Dashboard from "./pages/Dashboard"
 import Home from "./pages/Home"
 import Game from "./pages/Game"
+import Result from "./pages/Result"
+import Leaderboard from "./pages/Leaderboard"
 import Account from "./pages/Account"
 import ThemeSwitcher from "./components/ThemeSwitcher"
 
@@ -36,6 +38,8 @@ export default function App() {
           <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
           <Route path="/home" element={<Protected><Home /></Protected>} />
           <Route path="/game" element={<Protected><Game /></Protected>} />
+          <Route path="/result" element={<Protected><Result /></Protected>} />
+          <Route path="/leaderboard" element={<Protected><Leaderboard /></Protected>} />
           <Route path="/account" element={<Protected><Account /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

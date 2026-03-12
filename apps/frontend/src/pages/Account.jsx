@@ -5,7 +5,7 @@ import { useAuth } from "../context/AuthContext"
 export default function Account() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
-  const stats = user?.stats || { diamonds: 0, score: 0, streak: 0, rank: "Novice", level: 1 }
+  const stats = user?.stats || { diamonds: 0, score: 0, streak: 0, rank: "Novice", level: 1, gifts: 0 }
 
   return (
     <div className="min-h-screen bg-[#a8d18d] p-4 md:p-8 font-mono">
@@ -76,6 +76,9 @@ export default function Account() {
             </div>
             <div className="flex items-center gap-2 px-4 py-2 bg-rose-500 rounded-xl border-4 border-rose-700 shadow-[0_4px_0_0_#be123c] text-white font-black italic">
               <span>🔥</span> {stats.streak}
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-yellow-500 rounded-xl border-4 border-yellow-700 shadow-[0_4px_0_0_#a16207] text-white font-black italic">
+              <span>🎁</span> {stats.gifts || 0}
             </div>
           </div>
 
