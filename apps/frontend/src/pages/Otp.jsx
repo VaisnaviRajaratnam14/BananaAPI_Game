@@ -57,7 +57,7 @@ export default function Otp() {
       const userRes = await authApi.get("/auth/me")
       setUser(userRes.data)
 
-      navigate("/dashboard")
+      navigate("/intro")
     } catch {
       setError("Invalid code")
     }

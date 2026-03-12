@@ -3,7 +3,7 @@ import cors from "cors"
 import dotenv from "dotenv"
 import { createServer } from "http"
 import { Server } from "socket.io"
-import { register, login, requireAuth, oauthLogin, forgotStart, forgotVerify, forgotReset, getMe, updateUsername, addScoreToUser, collectRewards, getLeaderboard } from "./auth.js"
+import { register, login, requireAuth, oauthLogin, forgotStart, forgotVerify, forgotReset, getMe, updateUsername, addScoreToUser, collectRewards, getLeaderboard, changePassword, updateUser } from "./auth.js"
 import { send as sendOtp, verify as verifyOtp } from "./otp.js"
 import { puzzle, submit } from "./game.js"
 import { top, addScore } from "./leaderboard.js"
@@ -13,8 +13,8 @@ dotenv.config({ path: "../../.env" })
 
 const app = express()
 app.use(express.json())
-// Allow both 5173 and 5174 for development
-const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"]
+// Allow multiple ports for development
+const allowedOrigins = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"]
 app.use(cors({ 
   origin: (origin, callback) => {
     if (!origin || allowedOrigins.includes(origin)) {
@@ -33,7 +33,9 @@ app.post("/auth/forgot/start", forgotStart)
 app.post("/auth/forgot/verify", forgotVerify)
 app.post("/auth/forgot/reset", forgotReset)
 app.get("/auth/me", requireAuth, getMe)
+app.post("/auth/me/update", requireAuth, updateUser)
 app.post("/auth/username", requireAuth, updateUsername)
+app.post("/auth/password", requireAuth, changePassword)
 app.post("/auth/collect", requireAuth, collectRewards)
 app.get("/auth/leaderboard", getLeaderboard)
 

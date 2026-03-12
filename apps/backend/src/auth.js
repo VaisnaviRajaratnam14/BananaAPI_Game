@@ -202,6 +202,28 @@ export function getMe(req, res) {
   res.json(publicUser)
 }
 
+export function updateUser(req, res) {
+  const userId = req.user.sub
+  const { firstName, lastName, username } = req.body
+  
+  const user = Array.from(users.values()).find(u => u.id === userId)
+  if (!user) return res.status(404).json({ error: "User not found" })
+  
+  if (firstName !== undefined) user.firstName = firstName
+  if (lastName !== undefined) user.lastName = lastName
+  
+  if (username !== undefined && username !== user.username) {
+    if (!username) return res.status(400).json({ error: "Nickname cannot be empty" })
+    // Check if username already exists for another user
+    const exists = Array.from(users.values()).some(u => u.username === username && u.id !== userId)
+    if (exists) return res.status(400).json({ error: "Username is already taken!" })
+    user.username = username
+  }
+  
+  const { hash, ...publicUser } = user
+  res.json(publicUser)
+}
+
 export function updateUsername(req, res) {
   const userId = req.user.sub
   const { username } = req.body
@@ -212,7 +234,7 @@ export function updateUsername(req, res) {
   
   // Check if username already exists for another user
   const exists = Array.from(users.values()).some(u => u.username === username && u.id !== userId)
-  if (exists) return res.status(400).json({ error: "username_taken" })
+  if (exists) return res.status(400).json({ error: "Username is already taken!" })
   
   user.username = username
   const { hash, ...publicUser } = user
@@ -235,15 +257,33 @@ export function getLeaderboard(req, res) {
   res.json(sorted)
 }
 
+export function changePassword(req, res) {
+  const userId = req.user.sub
+  const { currentPassword, newPassword } = req.body
+  
+  const user = Array.from(users.values()).find(u => u.id === userId)
+  if (!user) return res.status(404).json({ error: "User not found" })
+  
+  // Verify current password
+  if (!bcrypt.compareSync(currentPassword, user.hash)) {
+    return res.status(400).json({ error: "Current password is incorrect" })
+  }
+  
+  // Hash and save new password
+  user.hash = bcrypt.hashSync(newPassword, 10)
+  res.json({ ok: true, message: "Password updated successfully!" })
+}
+
 export function collectRewards(req, res) {
   const userId = req.user.sub
-  const { diamonds = 0, gifts = 0, level = 1, stars = 0 } = req.body
+  const { diamonds = 0, gifts = 0, level = 1, stars = 0, score = 0 } = req.body
   
   const user = Array.from(users.values()).find(u => u.id === userId)
   if (!user) return res.status(404).json({ error: "not_found" })
   
   user.stats.diamonds += diamonds
   user.stats.gifts += gifts
+  user.stats.score += score // Add the new score to the total score
   
   // Track stars per level
   if (!user.stats.levelStars) user.stats.levelStars = {}
@@ -252,9 +292,31 @@ export function collectRewards(req, res) {
     user.stats.levelStars[level] = stars
   }
   
+  // Strict Level Progression Logic
+  // Check if user has 3 stars in all levels from 1 to 3
+  const hasThreeStarsInOneToThree = [1, 2, 3].every(l => (user.stats.levelStars[l] || 0) >= 3)
+
   // Advance level if the completed level is the current level
   if (level === user.stats.level) {
-    user.stats.level += 1
+    // If current level is less than 3, just advance
+    if (user.stats.level < 3) {
+      user.stats.level += 1
+    } 
+    // If current level is 3, only advance to 4 if levels 1, 2, and 3 are all 3-stars
+    else if (user.stats.level === 3) {
+      if (hasThreeStarsInOneToThree) {
+        user.stats.level = 4
+      }
+      // If not all 3-stars, they stay at level 3 until they re-play and get 3 stars
+    }
+    // For levels 4 and above, use normal progression (or add more rules here)
+    else {
+      user.stats.level += 1
+    }
+  } 
+  // If they were re-playing a lower level and finally got the 3rd star needed for level 4
+  else if (user.stats.level === 3 && hasThreeStarsInOneToThree) {
+    user.stats.level = 4
   }
   
   const { hash, ...publicUser } = user

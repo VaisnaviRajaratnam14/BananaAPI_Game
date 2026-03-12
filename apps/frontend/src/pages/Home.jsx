@@ -51,26 +51,6 @@ export default function Home() {
             <span className="text-lg font-black">{stats.diamonds}</span>
           </div>
 
-          {/* Energy */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a2118] border border-[#4d3a2a] rounded-full text-[#f97316]">
-            <div className="w-7 h-7 bg-[#f97316] rounded-lg flex items-center justify-center shadow-lg">
-              <svg className="w-5 h-5 text-[#2a2118]" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <span className="text-lg font-black">{stats.energy}</span>
-          </div>
-
-          {/* Streak */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a1a1e] border border-[#4d262a] rounded-full text-[#ef4444]">
-            <div className="w-7 h-7 bg-[#ef4444] rounded-lg flex items-center justify-center shadow-lg bg-opacity-20">
-              <svg className="w-5 h-5 text-[#ef4444]" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.334-.398-1.817a1 1 0 00-1.414-.914c-1.032.479-1.818 1.42-2.115 2.503-.16.588-.223 1.159-.223 1.64 0 2.445 1.556 4.605 3.703 5.19a7.003 7.003 0 018.674-6.2c-.185-.345-.453-.652-.782-.923a.997.997 0 01-.314-.733c0-.146.02-.294.06-.437.056-.204.19-.46.339-.735.148-.274.312-.574.441-.873.13-.3.213-.6.213-.862a1 1 0 00-.601-.91zM14.93 18.84a4.996 4.996 0 01-3.015-1.815 1.1 1.1 0 01.011-1.408 1.1 1.1 0 011.405-.011 2.992 2.992 0 004.108-.209 1.1 1.1 0 011.558 1.556 4.993 4.993 0 01-4.067 1.887z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <span className="text-lg font-black">{stats.streak}</span>
-          </div>
-
           {/* Gifts */}
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a2a18] border border-[#4d4d2a] rounded-full text-[#fbbf24]">
             <div className="w-7 h-7 bg-[#fbbf24] rounded-lg flex items-center justify-center shadow-lg">
