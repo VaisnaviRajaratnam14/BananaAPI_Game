@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import { withAuth } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
 import bananaImg from "../assets/banana.svg"
@@ -8,6 +8,8 @@ import bgImage from "../assets/backgroundg.jpg"
 export default function Game() {
   const navigate = useNavigate()
   const { token, user } = useAuth()
+  const location = useLocation()
+  const levelNo = location.state?.level || 1
   const api = withAuth(token)
   const [puzzle, setPuzzle] = useState(null)
   const [difficulty, setDifficulty] = useState("easy")
@@ -27,8 +29,7 @@ export default function Game() {
   const [stars, setStars] = useState(0) // 0, 1, 2, 2.5, 3
   const [hasGift, setHasGift] = useState(false)
 
-  const emojis = ["🍌", "❤️", "😊", "🐒", "⭐"]
-  const currentEmoji = emojis[(puzzleCount - 1) % emojis.length]
+  const currentEmoji = attempts === 3 ? "🍌" : "😊"
 
   useEffect(() => {
     if (token) {
@@ -71,7 +72,10 @@ export default function Game() {
       setAnswer("")
       setSelectedMissing(false)
       setResultMark("idle")
-      const r = await api.get("/game/puzzle", { params: { difficulty, mode } })
+      
+      // Level < 5: equations (internal), Level >= 5: external (Banana API)
+      const targetMode = levelNo >= 5 ? "external" : "equations"
+      const r = await api.get("/game/puzzle", { params: { difficulty, mode: targetMode } })
       setPuzzle(r.data)
     } catch (err) {
       setPuzzle(null)
@@ -117,10 +121,13 @@ export default function Game() {
         setStars(s)
         if (s > 0) {
           setStatus("Level Complete!")
+          setTimeout(() => {
+            navigate("/result", { state: { score: newScore, stars: s, hasGift: newScore >= 140, level: levelNo } })
+          }, 1500)
         } else {
           setStatus("Failed! Try Again")
+          setIsGameOver(true)
         }
-        setIsGameOver(true)
       }
     } else {
       const nextAttempts = attempts - 1
@@ -131,7 +138,20 @@ export default function Game() {
         setStatus("Not Correct! Try again.")
       } else {
         setStatus("Not Correct! Out of attempts.")
-        setIsGameOver(true)
+        // Calculate stars based on current score even if failed this puzzle
+        let s = 0
+        if (score >= 140) s = 3
+        else if (score >= 130) s = 2.5
+        else if (score >= 120) s = 2
+        else if (score >= 100) s = 1
+        
+        if (s > 0) {
+          setTimeout(() => {
+            navigate("/result", { state: { score, stars: s, hasGift: score >= 140, level: levelNo } })
+          }, 1500)
+        } else {
+          setIsGameOver(true)
+        }
       }
     }
   }
@@ -180,6 +200,14 @@ export default function Game() {
 
   return (
     <div className="min-h-screen relative flex flex-col" style={{ backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+      {/* Level Number Indicator - Left Side */}
+      <div className="absolute left-4 top-24 z-30">
+        <div className="bg-[#8b5a2b] border-4 border-[#5d3a1a] rounded-2xl p-3 shadow-[0_4px_0_0_#3d2611] text-white flex flex-col items-center min-w-[80px]">
+          <span className="text-[10px] font-black uppercase italic tracking-widest text-white/60">Level</span>
+          <span className="text-4xl font-black italic tracking-tighter">{levelNo}</span>
+        </div>
+      </div>
+
       {/* Top Navbar */}
       <nav className="h-16 bg-slate-800/90 border-b border-slate-700 flex items-center px-4 md:px-8 gap-6 z-20">
         <div className="flex items-center gap-2 mr-4">
@@ -197,7 +225,7 @@ export default function Game() {
           <button onClick={() => navigate("/home")} className="hover:text-white transition-colors">Home</button>
           <button className="hover:text-white transition-colors">Learn</button>
           <button className="hover:text-white transition-colors">Daily Challenge</button>
-          <button className="hover:text-white transition-colors">Leaderboard</button>
+          <button onClick={() => navigate("/leaderboard")} className="hover:text-white transition-colors">Leaderboard</button>
           <button className="hover:text-white transition-colors">Shop</button>
           <button className="hover:text-white transition-colors">Community</button>
         </div>
@@ -233,6 +261,14 @@ export default function Game() {
               </svg>
             </div>
             <span className="text-lg font-black">{user?.stats?.streak || 0}</span>
+          </div>
+
+          {/* Gifts */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a2a18] border border-[#4d4d2a] rounded-full text-[#fbbf24]">
+            <div className="w-7 h-7 bg-[#fbbf24] rounded-lg flex items-center justify-center shadow-lg">
+              <span className="text-sm">🎁</span>
+            </div>
+            <span className="text-lg font-black">{user?.stats?.gifts || 0}</span>
           </div>
 
           {/* User Profile */}

@@ -8,14 +8,13 @@ export default function Home() {
   const stats = user?.stats || { diamonds: 500, score: 0, streak: 0, rank: "Novice" }
 
   const levels = [
-    { id: 1, status: "completed", stars: 3, pos: { x: 80, y: 90 } },
-    { id: 2, status: "completed", stars: 2, pos: { x: 60, y: 80 } },
-    { id: 3, status: "completed", stars: 3, pos: { x: 30, y: 70 } },
-    { id: 4, status: "current", stars: 0, pos: { x: 20, y: 55 } },
-    { id: 5, status: "locked", stars: 0, pos: { x: 40, y: 45 } },
-    { id: 6, status: "locked", stars: 0, pos: { x: 35, y: 30 } },
-    { id: 7, status: "locked", stars: 0, pos: { x: 50, y: 20 } },
-    { id: 8, status: "locked", stars: 0, pos: { x: 25, y: 10 } },
+    { id: 1, pos: { x: 50, y: 1400 }, status: user?.stats?.level > 1 ? "completed" : user?.stats?.level === 1 ? "current" : "locked", stars: user?.stats?.levelStars?.[1] || 0 },
+    { id: 2, pos: { x: 30, y: 1200 }, status: user?.stats?.level > 2 ? "completed" : user?.stats?.level === 2 ? "current" : "locked", stars: user?.stats?.levelStars?.[2] || 0 },
+    { id: 3, pos: { x: 60, y: 1000 }, status: user?.stats?.level > 3 ? "completed" : user?.stats?.level === 3 ? "current" : "locked", stars: user?.stats?.levelStars?.[3] || 0 },
+    { id: 4, pos: { x: 40, y: 800 }, status: user?.stats?.level > 4 ? "completed" : user?.stats?.level === 4 ? "current" : "locked", stars: user?.stats?.levelStars?.[4] || 0 },
+    { id: 5, pos: { x: 70, y: 600 }, status: user?.stats?.level > 5 ? "completed" : user?.stats?.level === 5 ? "current" : "locked", stars: user?.stats?.levelStars?.[5] || 0 },
+    { id: 6, pos: { x: 30, y: 400 }, status: user?.stats?.level > 6 ? "completed" : user?.stats?.level === 6 ? "current" : "locked", stars: user?.stats?.levelStars?.[6] || 0 },
+    { id: 7, pos: { x: 60, y: 200 }, status: user?.stats?.level > 7 ? "completed" : user?.stats?.level === 7 ? "current" : "locked", stars: user?.stats?.levelStars?.[7] || 0 },
   ]
 
   return (
@@ -34,7 +33,7 @@ export default function Home() {
           <button className="text-white border-b-2 border-pink-500 pb-1">Home</button>
           <button className="hover:text-white transition-colors">Learn</button>
           <button className="hover:text-white transition-colors">Daily Challenge</button>
-          <button className="hover:text-white transition-colors">Leaderboard</button>
+          <button onClick={() => navigate("/leaderboard")} className="hover:text-white transition-colors">Leaderboard</button>
           <button className="hover:text-white transition-colors">Shop</button>
           <button className="hover:text-white transition-colors">Community</button>
         </div>
@@ -72,6 +71,14 @@ export default function Home() {
             <span className="text-lg font-black">{stats.streak}</span>
           </div>
 
+          {/* Gifts */}
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a2a18] border border-[#4d4d2a] rounded-full text-[#fbbf24]">
+            <div className="w-7 h-7 bg-[#fbbf24] rounded-lg flex items-center justify-center shadow-lg">
+              <span className="text-sm">🎁</span>
+            </div>
+            <span className="text-lg font-black">{user?.stats?.gifts || 0}</span>
+          </div>
+
           {/* User Profile */}
           <div 
             onClick={() => navigate("/account")}
@@ -107,7 +114,7 @@ export default function Home() {
 
           {/* Levels along the path */}
           <div className="relative w-full max-w-md h-full flex flex-col gap-32">
-            {levels.reverse().map((level) => (
+            {[...levels].reverse().map((level) => (
               <div
                 key={level.id}
                 className="relative flex justify-center"
@@ -115,7 +122,7 @@ export default function Home() {
               >
                 {/* Level Node */}
                 <button
-                  onClick={() => level.status !== "locked" && navigate("/game")}
+                  onClick={() => level.status !== "locked" && navigate("/game", { state: { level: level.id } })}
                   className={`
                     w-20 h-20 rounded-full border-b-8 shadow-xl flex items-center justify-center text-3xl font-black relative transition-all active:scale-95
                     ${level.status === "completed" ? "bg-sky-400 border-sky-600 text-white" : ""}
