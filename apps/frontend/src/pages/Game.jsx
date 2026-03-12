@@ -28,6 +28,7 @@ export default function Game() {
   const [isGameOver, setIsGameOver] = useState(false)
   const [stars, setStars] = useState(0) // 0, 1, 2, 2.5, 3
   const [hasGift, setHasGift] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
 
   const currentEmoji = attempts === 3 ? "🍌" : "😊"
 
@@ -36,16 +37,15 @@ export default function Game() {
       resetGame()
       loadPuzzle()
     }
-  }, [mode, token])
+  }, [mode, token, levelNo])
 
   useEffect(() => {
     let t = null
-    if (puzzle && seconds > 0 && !isGameOver) {
+    if (puzzle && seconds > 0 && !isGameOver && !isPaused) {
       t = setInterval(() => {
         setSeconds(s => {
           if (s <= 1) {
-            setIsGameOver(true)
-            setStatus("Time's Up!")
+            handleTimeout()
             return 0
           }
           return s - 1
@@ -53,7 +53,33 @@ export default function Game() {
       }, 1000)
     }
     return () => t && clearInterval(t)
-  }, [puzzle, seconds, isGameOver])
+  }, [puzzle, seconds, isGameOver, isPaused])
+
+  function handleTimeout() {
+    const nextAttempts = attempts - 1
+    if (nextAttempts > 0) {
+      setAttempts(nextAttempts)
+      setSeconds(60) // Reset timer for the next attempt
+      setStatus(`Time's up! Attempt ${4 - nextAttempts} of 3`)
+    } else {
+      setAttempts(0)
+      setIsGameOver(true)
+      setStatus("Game Over! Out of time and attempts.")
+      
+      // Navigate to result if they have some score
+      let s = 0
+      if (score >= 140) s = 3
+      else if (score >= 130) s = 2.5
+      else if (score >= 120) s = 2
+      else if (score >= 100) s = 1
+      
+      if (s > 0) {
+        setTimeout(() => {
+          navigate("/result", { state: { score, stars: s, hasGift: score >= 140, level: levelNo } })
+        }, 1500)
+      }
+    }
+  }
 
   function resetGame() {
     setPuzzleCount(1)
@@ -85,7 +111,7 @@ export default function Game() {
   }
 
   async function submit() {
-    if (!puzzle || isGameOver) return
+    if (!puzzle || isGameOver || isPaused) return
     
     const correct = String(puzzle.solution) === String(answer)
     setAnswer("") // Automatically clear the input field after clicking submit
@@ -111,18 +137,18 @@ export default function Game() {
           loadPuzzle()
         }, 1000)
       } else {
-        // Calculate stars based on final total score
+        // Calculate stars based on final total score (Max 150)
         let s = 0
-        if (newScore >= 140) { s = 3; setHasGift(true) }
-        else if (newScore >= 130) s = 2.5
+        if (newScore >= 150) s = 3
         else if (newScore >= 120) s = 2
         else if (newScore >= 100) s = 1
         
         setStars(s)
-        if (s > 0) {
+        const hasGift = newScore >= 110
+        if (s > 0 || hasGift) {
           setStatus("Level Complete!")
           setTimeout(() => {
-            navigate("/result", { state: { score: newScore, stars: s, hasGift: newScore >= 140, level: levelNo } })
+            navigate("/result", { state: { score: newScore, stars: s, hasGift, level: levelNo } })
           }, 1500)
         } else {
           setStatus("Failed! Try Again")
@@ -138,16 +164,16 @@ export default function Game() {
         setStatus("Not Correct! Try again.")
       } else {
         setStatus("Not Correct! Out of attempts.")
-        // Calculate stars based on current score even if failed this puzzle
+        // Calculate stars based on current score even if failed this puzzle (Max 150)
         let s = 0
-        if (score >= 140) s = 3
-        else if (score >= 130) s = 2.5
+        if (score >= 150) s = 3
         else if (score >= 120) s = 2
         else if (score >= 100) s = 1
         
-        if (s > 0) {
+        const hasGift = score >= 110
+        if (s > 0 || hasGift) {
           setTimeout(() => {
-            navigate("/result", { state: { score, stars: s, hasGift: score >= 140, level: levelNo } })
+            navigate("/result", { state: { score, stars: s, hasGift, level: levelNo } })
           }, 1500)
         } else {
           setIsGameOver(true)
@@ -208,6 +234,37 @@ export default function Game() {
         </div>
       </div>
 
+      {/* Right Side Control Buttons */}
+      <div className="absolute right-4 top-24 z-30 flex flex-col gap-4">
+        {/* Play/Resume Button */}
+        <button 
+          onClick={() => setIsPaused(!isPaused)}
+          className={`w-16 h-16 rounded-2xl border-4 border-[#5d3a1a] flex items-center justify-center shadow-[0_4px_0_0_#3d2611] transition-all active:translate-y-1 active:shadow-none ${isPaused ? 'bg-[#4ba334] text-white animate-pulse' : 'bg-[#ffa500] text-[#5d3a1a]'}`}
+          title={isPaused ? "Resume Game" : "Pause Game"}
+        >
+          {isPaused ? (
+            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v6a1 1 0 001.555.832l4-3a1 1 0 000-1.664l-4-3z" clipRule="evenodd" />
+            </svg>
+          ) : (
+            <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+          )}
+        </button>
+
+        {/* Replay Button */}
+        <button 
+          onClick={() => { resetGame(); loadPuzzle() }}
+          className="w-16 h-16 bg-pink-500 text-white rounded-2xl border-4 border-pink-700 flex items-center justify-center shadow-[0_4px_0_0_#991b1b] transition-all active:translate-y-1 active:shadow-none"
+          title="Restart Level"
+        >
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+      </div>
+
       {/* Top Navbar */}
       <nav className="h-16 bg-slate-800/90 border-b border-slate-700 flex items-center px-4 md:px-8 gap-6 z-20">
         <div className="flex items-center gap-2 mr-4">
@@ -224,7 +281,6 @@ export default function Game() {
         <div className="hidden md:flex items-center gap-8 text-sm font-bold uppercase tracking-wider text-slate-300">
           <button onClick={() => navigate("/home")} className="hover:text-white transition-colors">Home</button>
           <button className="hover:text-white transition-colors">Learn</button>
-          <button className="hover:text-white transition-colors">Daily Challenge</button>
           <button onClick={() => navigate("/leaderboard")} className="hover:text-white transition-colors">Leaderboard</button>
           <button className="hover:text-white transition-colors">Shop</button>
           <button className="hover:text-white transition-colors">Community</button>
@@ -241,26 +297,6 @@ export default function Game() {
               </svg>
             </div>
             <span className="text-lg font-black">{user?.stats?.diamonds || 0}</span>
-          </div>
-
-          {/* Energy */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a2118] border border-[#4d3a2a] rounded-full text-[#f97316]">
-            <div className="w-7 h-7 bg-[#f97316] rounded-lg flex items-center justify-center shadow-lg">
-              <svg className="w-5 h-5 text-[#2a2118]" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <span className="text-lg font-black">{user?.stats?.energy || 0}</span>
-          </div>
-
-          {/* Streak */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a1a1e] border border-[#4d262a] rounded-full text-[#ef4444]">
-            <div className="w-7 h-7 bg-[#ef4444] rounded-lg flex items-center justify-center shadow-lg bg-opacity-20">
-              <svg className="w-5 h-5 text-[#ef4444]" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.334-.398-1.817a1 1 0 00-1.414-.914c-1.032.479-1.818 1.42-2.115 2.503-.16.588-.223 1.159-.223 1.64 0 2.445 1.556 4.605 3.703 5.19a7.003 7.003 0 018.674-6.2c-.185-.345-.453-.652-.782-.923a.997.997 0 01-.314-.733c0-.146.02-.294.06-.437.056-.204.19-.46.339-.735.148-.274.312-.574.441-.873.13-.3.213-.6.213-.862a1 1 0 00-.601-.91zM14.93 18.84a4.996 4.996 0 01-3.015-1.815 1.1 1.1 0 01.011-1.408 1.1 1.1 0 011.405-.011 2.992 2.992 0 004.108-.209 1.1 1.1 0 011.558 1.556 4.993 4.993 0 01-4.067 1.887z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <span className="text-lg font-black">{user?.stats?.streak || 0}</span>
           </div>
 
           {/* Gifts */}
@@ -320,7 +356,18 @@ export default function Game() {
             </div>
 
             {/* The Grid area */}
-            <div className="flex-1 flex items-center justify-center my-4">
+            <div className="flex-1 flex items-center justify-center my-4 relative">
+              {isPaused && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl animate-in fade-in duration-300">
+                  <div className="text-[#5d3a1a] text-4xl font-black italic uppercase tracking-tighter mb-4">GAME PAUSED</div>
+                  <button 
+                    onClick={() => setIsPaused(false)}
+                    className="bg-[#4ba334] text-white px-8 py-3 rounded-full font-black italic uppercase shadow-lg hover:scale-110 transition-transform"
+                  >
+                    RESUME 🎮
+                  </button>
+                </div>
+              )}
               {puzzle?.type === "external" && (
                 <div className="w-full max-w-lg bg-white p-2 rounded-lg shadow-sm border border-gray-100">
                   <img src={puzzle.question} alt="Banana Puzzle" className="w-full h-auto object-contain" />
@@ -411,14 +458,15 @@ export default function Game() {
                     inputMode="numeric"
                     value={answer}
                     onChange={e=>setAnswer(e.target.value.replace(/\D/g,""))}
-                    className="w-16 h-10 text-xl text-center rounded-lg bg-gradient-to-r from-orange-400 to-red-400 text-white font-bold border-none shadow-sm focus:ring-4 ring-orange-200 outline-none"
+                    disabled={isPaused}
+                    className="w-16 h-10 text-xl text-center rounded-lg bg-gradient-to-r from-orange-400 to-red-400 text-white font-bold border-none shadow-sm focus:ring-4 ring-orange-200 outline-none disabled:opacity-50"
                     autoFocus
                   />
                 </div>
                 
                 <div className="flex gap-2 ml-auto">
-                  <button onClick={revealHint} className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold rounded-lg text-xs transition-colors">Hint</button>
-                  <button onClick={submit} className="px-4 py-1.5 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg text-xs shadow-md transition-all active:scale-95">Submit</button>
+                  <button onClick={revealHint} disabled={isPaused} className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 disabled:opacity-50 text-blue-700 font-bold rounded-lg text-xs transition-colors">Hint</button>
+                  <button onClick={submit} disabled={isPaused} className="px-4 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs shadow-md transition-all active:scale-95">Submit</button>
                   <div className="flex gap-1">
                     <button 
                       onClick={() => {
@@ -428,7 +476,7 @@ export default function Game() {
                           loadPuzzle()
                         }
                       }} 
-                      disabled={puzzleCount <= 1}
+                      disabled={puzzleCount <= 1 || isPaused}
                       className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-600 font-bold rounded-lg text-lg transition-colors leading-none"
                       title="Previous Puzzle"
                     >
@@ -442,7 +490,7 @@ export default function Game() {
                           loadPuzzle()
                         }
                       }} 
-                      disabled={puzzleCount >= 3}
+                      disabled={puzzleCount >= 3 || isPaused}
                       className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-600 font-bold rounded-lg text-lg transition-colors leading-none"
                       title="Next Puzzle"
                     >
