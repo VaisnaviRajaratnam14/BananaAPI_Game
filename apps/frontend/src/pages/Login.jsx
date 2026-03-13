@@ -1,312 +1,155 @@
-import React, { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { api } from "../utils/api"
+import React, { useState } from "react"
+import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import bananaImage from "../assets/banana.avif"
+import { api, withAuth } from "../utils/api"
+import bgImage from "../assets/background.avif"
 
 export default function Login() {
-  const navigate = useNavigate()
-  const { setToken, setMfaVerified } = useAuth()
-  const [mode, setMode] = useState("email")
   const [identifier, setIdentifier] = useState("")
-  const [idError, setIdError] = useState("")
   const [password, setPassword] = useState("")
-  const [show, setShow] = useState(false)
-  const [remember, setRemember] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [phoneCode, setPhoneCode] = useState("+91")
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [codeError, setCodeError] = useState("")
-  const [showForgot, setShowForgot] = useState(false)
-  const [resetId, setResetId] = useState("")
-  const [resetOtp, setResetOtp] = useState("")
-  const [resetPreview, setResetPreview] = useState("")
-  const [newPw, setNewPw] = useState("")
-  const [newPwConfirm, setNewPwConfirm] = useState("")
-  const [showGoogle, setShowGoogle] = useState(false)
+  const { login, setUser } = useAuth()
+  const navigate = useNavigate()
 
-  function validateIdentifier(id) {
-    if (mode !== "email") return ""
-    if (!id.includes("@")) return "Email must contain @"
-    const parts = id.split("@")
-    if (parts.length !== 2) return "Invalid email"
-    const domain = parts[1].toLowerCase()
-    if (domain.includes("gmail") && !domain.endsWith("gmail.com")) return "Gmail domain must be gmail.com"
-    return ""
-  }
-
-  function validatePhone(code, num) {
-    const codeOk = /^\+\d{1,3}$/.test(code)
-    const numOk = /^\d{10}$/.test(num)
-    if (!codeOk) return "Country code must start with + and 1-3 digits"
-    if (!numOk) return "Phone number must be 10 digits"
-    return ""
-  }
-
-  async function onLogin(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
     setError("")
-    if (mode === "email") {
-      const v = validateIdentifier(identifier)
-      setIdError(v)
-      if (v) { setLoading(false); return }
-    } else {
-      const v = validatePhone(phoneCode, phoneNumber)
-      setIdError(v)
-      if (v) { setLoading(false); return }
+
+    // Frontend Validation
+    if (identifier.trim().length < 3) {
+      setLoading(false)
+      return setError("IDENTIFIER: Must be at least 3 characters")
     }
+    if (password.length < 4) {
+      setLoading(false)
+      return setError("PASSWORD: Must be at least 4 characters")
+    }
+
     try {
-      const id = mode === "phone" ? phoneNumber : identifier
-      const res = await api.post("/auth/login", { mode, identifier: id, password, remember })
-      const { loginTokenId } = res.data
-      sessionStorage.setItem("loginTokenId", loginTokenId)
-      sessionStorage.setItem("loginMode", mode)
-      await api.post("/otp/send", { loginTokenId, channel: mode === "phone" ? "sms" : "email" })
-      setToken("")
-      setMfaVerified(false)
-      navigate("/otp")
+      // Django Rest Framework SimpleJWT uses 'username' and 'password'
+      // Mapping 'identifier' to 'username'
+      const res = await api.post("auth/login/", { 
+        username: identifier.trim(), 
+        password: password // Don't trim password as it might have intended spaces
+      })
+      const { access } = res.data
+      
+      // Save token and mark as verified (bypassing OTP for now)
+      login(access)
+      
+      // Fetch profile data
+      const authApi = withAuth(access)
+      const userRes = await authApi.get("user/stats/")
+      setUser(userRes.data)
+
+      navigate("/intro")
     } catch (err) {
-      setError("Login failed")
+      const serverData = err.response?.data
+
+      if (serverData && typeof serverData === 'object') {
+        // Handle DRF { detail: "..." } or { non_field_errors: ["..."] } or { username: ["..."] }
+        let errorMsg = serverData.detail || serverData.non_field_errors?.[0]
+        
+        if (!errorMsg) {
+          const firstValue = Object.values(serverData)[0]
+          errorMsg = Array.isArray(firstValue) ? firstValue[0] : firstValue
+        }
+        
+        setError(String(errorMsg || "LOGIN FAILED").toUpperCase())
+      } else {
+        setError(err.message?.toUpperCase() || "NETWORK ERROR: PLEASE TRY AGAIN")
+      }
     } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => {
-    const savedEmail = localStorage.getItem("savedEmail")
-    const savedPassword = sessionStorage.getItem("savedPassword")
-    if (savedEmail) {
-      setIdentifier(savedEmail)
-      setIdError(validateIdentifier(savedEmail))
-    }
-    if (savedEmail && savedPassword && mode === "email") {
-      ;(async () => {
-        setLoading(true)
-        setError("")
-        try {
-          const res = await api.post("/auth/login", { mode: "email", identifier: savedEmail, password: savedPassword, remember: true })
-          const { loginTokenId } = res.data
-          sessionStorage.setItem("loginTokenId", loginTokenId)
-          sessionStorage.removeItem("savedPassword")
-          setToken("")
-          setMfaVerified(false)
-          navigate("/otp")
-        } catch {
-          setError("Login failed")
-        } finally {
-          setLoading(false)
-        }
-      })()
-    }
-  }, [])
+  const [showPassword, setShowPassword] = useState(false)
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-      <div className="relative order-2 md:order-2 h-80 sm:h-96 md:h-auto md:min-h-[calc(100vh-96px)] lg:col-span-3">
-        <img
-          src={bananaImage}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-      </div>
-      <div className="relative order-1 md:order-1 flex items-center justify-center min-h-screen px-4 py-10">
-        <div className="parchment p-6 md:p-8 rounded-2xl w-full max-w-sm md:max-w-md">
-          <div className="text-center mb-6">
-            <div className="text-4xl md:text-5xl font-extrabold text-banana-dark leading-none">Brain Adveture</div>
-            <div className="mt-2 text-lg font-semibold text-orange-700">Sign In</div>
-          </div>
-          <div className="flex gap-3 mb-6 justify-center">
-            <button onClick={() => setMode("email")} className={`${mode==="email"?"btn-green":"bg-white/70"} px-4 py-2`}>
-              Email
-            </button>
-            <button onClick={() => setMode("phone")} className={`${mode==="phone"?"btn-green":"bg-white/70"} px-4 py-2`}>
-              Phone
-            </button>
-          <button
-            onClick={async ()=>{
-              setLoading(true)
-              setError("")
-              try {
-                const email = identifier && identifier.includes("@") ? identifier : "user1@gmail.com"
-                const r = await api.get("/auth/oauth/google", { params: { email } })
-                const { loginTokenId } = r.data
-                sessionStorage.setItem("loginTokenId", loginTokenId)
-                sessionStorage.setItem("loginMode", "email")
-                await api.post("/otp/send", { loginTokenId, channel: "email" })
-                setToken("")
-                setMfaVerified(false)
-                navigate("/otp")
-              } catch {
-                setError("Google sign-in failed")
-              } finally {
-                setLoading(false)
-              }
-            }}
-            className="px-4 py-2 btn-green"
-          >
-            Google
-          </button>
-        </div>
-          <form onSubmit={onLogin} className="space-y-3">
-          {mode==="email" ? (
-            <input
-              type="email"
-              placeholder="Email"
-              value={identifier}
-              onChange={e=>{
-                setIdentifier(e.target.value)
-                setIdError(validateIdentifier(e.target.value))
-              }}
-              className="w-full input-hero"
-              required
-            />
-          ) : (
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={phoneCode}
-                onChange={e=>{
-                  setPhoneCode(e.target.value)
-                  const v = validatePhone(e.target.value, phoneNumber)
-                  setIdError(v)
-                }}
-                className="w-24 input-hero"
-                placeholder="+91"
-                required
-              />
-              <input
-                type="tel"
-                value={phoneNumber}
-                onChange={e=>{
-                  const val = e.target.value.replace(/\D/g,"").slice(0,10)
-                  setPhoneNumber(val)
-                  const v = validatePhone(phoneCode, val)
-                  setIdError(v)
-                }}
-                className="flex-1 input-hero"
-                placeholder="10-digit phone"
-                required
-              />
-            </div>
-          )}
-          {idError && <div className="text-red-600 text-sm">{idError}</div>}
-          <div className="text-xs text-black/60">
-            {mode==="phone" ? "OTP will be sent to your phone number" : "OTP will be sent to your email"}
-          </div>
+    <div
+      className="min-h-screen flex items-center justify-center p-4 font-mono relative"
+      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}
+    >
+      {/* dark overlay */}
+      <div className="absolute inset-0 bg-[#0a1628]/70" />
+
+      <div className="relative z-10 w-full max-w-sm bg-[#0d1f3c]/90 backdrop-blur-md p-8 rounded-[2.5rem] border-2 border-cyan-400/60 shadow-[0_0_40px_rgba(6,182,212,0.25)] text-center">
+
+        {/* Cyan glow accent top */}
+        <div className="absolute -top-px left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent rounded-full" />
+
+        <h1 className="text-4xl font-black text-white italic uppercase tracking-tighter mb-2 drop-shadow-lg">
+          Player Login
+        </h1>
+        <p className="text-cyan-400/70 text-xs font-bold uppercase tracking-widest mb-8">Welcome back, explorer</p>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="relative">
             <input
-              type={show ? "text" : "password"}
-              placeholder="Password"
+              type="text"
+              placeholder="USERNAME OR EMAIL"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              className="w-full bg-[#071428] text-white placeholder-white/30 px-6 py-4 rounded-2xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none font-bold tracking-wider text-center transition-colors"
+              required
+            />
+          </div>
+
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="PASSWORD"
               value={password}
-              onChange={e=>setPassword(e.target.value)}
-              className="w-full input-hero pr-10"
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-[#071428] text-white placeholder-white/30 px-6 py-4 pr-14 rounded-2xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none font-bold tracking-wider text-center transition-colors"
               required
             />
             <button
               type="button"
-              onClick={() => setShow(s=>!s)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-1"
-              aria-label="Toggle password"
-              title="Show password"
+              onClick={() => setShowPassword(v => !v)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-cyan-400/60 hover:text-cyan-300 transition-colors"
+              tabIndex={-1}
             >
-              <span className="text-xl">{show ? "🙈" : "👁️"}</span>
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              )}
             </button>
           </div>
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={remember} onChange={e=>setRemember(e.target.checked)} />
-              <span>Remember Me</span>
-            </label>
-            <button type="button" onClick={()=>setShowForgot(true)} className="text-sm text-banana-dark">Forgot Password</button>
-          </div>
-          {error && <div className="text-red-600 text-sm">{error}</div>}
-          <button disabled={loading} className="w-full py-3 btn-orange text-black font-semibold">
-            {loading ? "Signing in..." : "Sign In"}
+
+          {error && (
+            <div className="bg-red-500/20 border border-red-400/60 rounded-xl p-3 text-red-300 text-center font-bold uppercase text-xs">
+              ⚠️ {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-black italic py-4 rounded-2xl border-2 border-orange-300/40 shadow-[0_6px_0_0_#c2410c] hover:shadow-[0_4px_0_0_#c2410c] transition-all active:translate-y-1 active:shadow-none uppercase tracking-wider text-xl"
+          >
+            {loading ? "AUTHENTICATING..." : "Start Adventure"}
           </button>
         </form>
-        <div className="mt-2 text-sm text-center">
-          New here?
-          <button onClick={() => navigate("/register")} className="ml-1 text-banana-dark">Create Account</button>
-        </div>
+
+        <div className="mt-8 pt-6 border-t border-cyan-500/20 flex flex-col gap-3">
+          <Link to="/register" className="text-cyan-400 hover:text-orange-400 font-black italic uppercase tracking-tighter text-sm transition-colors">
+            New Explorer? Join Now!
+          </Link>
+          <Link to="/forgot" className="text-white/40 hover:text-white/70 font-bold italic uppercase tracking-tighter text-[10px] transition-colors">
+            I forgot my secret code
+          </Link>
         </div>
       </div>
-      {showForgot && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="glass p-6 rounded-2xl w-full max-w-sm">
-            <div className="text-lg mb-2">Reset Password</div>
-            {resetId ? (
-              <>
-                <div className="mb-2">Enter OTP sent to your {mode}</div>
-                <input value={resetOtp} onChange={e=>setResetOtp(e.target.value)} className="w-full px-3 py-2 rounded bg-white/70 mb-2" placeholder="6-digit OTP" />
-                {resetPreview && <div className="text-xs text-black/60 mb-2">Dev code {resetPreview}</div>}
-                <div className="relative mb-2">
-                  <input type="password" value={newPw} onChange={e=>setNewPw(e.target.value)} placeholder="New Password" className="w-full px-3 py-2 rounded bg-white/70" />
-                </div>
-                <div className="relative mb-2">
-                  <input type="password" value={newPwConfirm} onChange={e=>setNewPwConfirm(e.target.value)} placeholder="Confirm Password" className="w-full px-3 py-2 rounded bg-white/70" />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={async ()=>{
-                      try {
-                        await api.post("/auth/forgot/verify", { resetId, otp: resetOtp })
-                        if (newPw !== newPwConfirm || newPw.length < 8) return
-                        await api.post("/auth/forgot/reset", { resetId, newPassword: newPw })
-                        setShowForgot(false)
-                        setResetId("")
-                        setResetOtp("")
-                        setResetPreview("")
-                        setNewPw("")
-                        setNewPwConfirm("")
-                      } catch {}
-                    }}
-                    className="px-3 py-2 rounded bg-banana text-black"
-                  >
-                    Verify & Reset
-                  </button>
-                  <button onClick={()=>{setShowForgot(false); setResetId(""); setResetOtp(""); setResetPreview("");}} className="px-3 py-2 rounded bg-white/60">Close</button>
-                </div>
-              </>
-            ) : (
-              <>
-                {mode==="email" ? (
-                  <input
-                    type="email"
-                    value={identifier}
-                    onChange={e=>setIdentifier(e.target.value)}
-                    className="w-full px-3 py-2 rounded bg-white/70 mb-2"
-                    placeholder="Email"
-                  />
-                ) : (
-                  <div className="flex gap-2 mb-2">
-                    <input type="text" value={phoneCode} onChange={e=>setPhoneCode(e.target.value)} className="w-24 px-3 py-2 rounded bg-white/70" placeholder="+91" />
-                    <input type="tel" value={phoneNumber} onChange={e=>setPhoneNumber(e.target.value.replace(/\D/g,'').slice(0,10))} className="flex-1 px-3 py-2 rounded bg-white/70" placeholder="10-digit phone" />
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <button
-                    onClick={async ()=>{
-                      try {
-                        const id = mode==="phone" ? phoneNumber : identifier
-                        const r = await api.post("/auth/forgot/start", { mode, identifier: id })
-                        setResetId(r.data.resetId)
-                        if (r.data.previewCode) setResetPreview(r.data.previewCode)
-                      } catch {}
-                    }}
-                    className="px-3 py-2 rounded bg-banana text-black"
-                  >
-                    Send OTP
-                  </button>
-                  <button onClick={()=>setShowForgot(false)} className="px-3 py-2 rounded bg-white/60">Close</button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-      
     </div>
   )
 }

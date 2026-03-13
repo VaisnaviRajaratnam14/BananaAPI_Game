@@ -14,7 +14,7 @@ export default function Leaderboard() {
     async function fetchLeaderboard() {
       try {
         setError("")
-        const r = await api.get("/auth/leaderboard")
+        const r = await api.get("leaderboard/")
         setPlayers(r.data)
       } catch (err) {
         console.error("Failed to fetch leaderboard", err)
@@ -86,7 +86,7 @@ export default function Leaderboard() {
                         {player.username} {isMe && "(YOU)"}
                       </div>
                       <div className={`text-[10px] font-bold uppercase tracking-widest ${isMe ? "text-pink-200" : "text-[#8b5a2b]/60"}`}>
-                        {player.rank} • Level {player.level}
+                        {player.rank} • Level {player.current_level}
                       </div>
                     </div>
 

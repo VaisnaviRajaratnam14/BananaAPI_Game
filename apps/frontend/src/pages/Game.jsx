@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { withAuth } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
 import bananaImg from "../assets/banana.svg"
-import bgImage from "../assets/backgroundg.jpg"
+import bgImage from "../assets/backgroundg.webp"
 
 export default function Game() {
   const navigate = useNavigate()
@@ -12,16 +12,27 @@ export default function Game() {
   const levelNo = location.state?.level || 1
   const api = withAuth(token)
   const [puzzle, setPuzzle] = useState(null)
-  const [difficulty, setDifficulty] = useState("easy")
-  const [mode, setMode] = useState("equations")
   const [answer, setAnswer] = useState("")
-  const [seconds, setSeconds] = useState(60) // Start at 1:00 (60s) for "Fast Timer"
+  const [seconds, setSeconds] = useState(60)
   const [score, setScore] = useState(0)
   const [status, setStatus] = useState("")
-  const [hint, setHint] = useState("")
-  const [selectedMissing, setSelectedMissing] = useState(false)
-  const [resultMark, setResultMark] = useState("idle")
-  
+  const [musicEnabled, setMusicEnabled] = useState(localStorage.getItem("musicEnabled") !== "false")
+  const [musicVolume, setMusicVolume] = useState(parseFloat(localStorage.getItem("musicVolume") || "0.2"))
+
+  const toggleMusic = () => {
+    const newState = !musicEnabled
+    setMusicEnabled(newState)
+    localStorage.setItem("musicEnabled", newState)
+    window.dispatchEvent(new Event("storage"))
+  }
+
+  const changeVolume = (e) => {
+    const newVolume = parseFloat(e.target.value)
+    setMusicVolume(newVolume)
+    localStorage.setItem("musicVolume", newVolume)
+    window.dispatchEvent(new Event("storage"))
+  }
+
   // New Level Logic State
   const [puzzleCount, setPuzzleCount] = useState(1) // 1 to 3
   const [attempts, setAttempts] = useState(3) // 3 attempts per puzzle
@@ -29,6 +40,7 @@ export default function Game() {
   const [stars, setStars] = useState(0) // 0, 1, 2, 2.5, 3
   const [hasGift, setHasGift] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
+  const levelStartedAtRef = useRef(Date.now())
 
   const currentEmoji = attempts === 3 ? "🍌" : "😊"
 
@@ -37,54 +49,52 @@ export default function Game() {
       resetGame()
       loadPuzzle()
     }
-  }, [mode, token, levelNo])
+  }, [token, levelNo])
 
   useEffect(() => {
-    let t = null
-    if (puzzle && seconds > 0 && !isGameOver && !isPaused) {
-      t = setInterval(() => {
-        setSeconds(s => {
-          if (s <= 1) {
-            handleTimeout()
-            return 0
-          }
-          return s - 1
-        })
-      }, 1000)
+    if (isPaused || isGameOver || !puzzle) return
+
+    if (seconds > 0) {
+      const timer = setInterval(() => setSeconds((s) => s - 1), 1000)
+      return () => clearInterval(timer)
     }
-    return () => t && clearInterval(t)
-  }, [puzzle, seconds, isGameOver, isPaused])
+
+    if (seconds === 0) {
+      handleTimeout()
+    }
+  }, [seconds, isPaused, isGameOver, puzzle])
 
   function handleTimeout() {
     const nextAttempts = attempts - 1
     if (nextAttempts > 0) {
       setAttempts(nextAttempts)
-      setSeconds(60) // Reset timer for the next attempt
+      setSeconds(60)
       setStatus(`Time's up! Attempt ${4 - nextAttempts} of 3`)
-    } else {
-      setAttempts(0)
-      setIsGameOver(true)
-      setStatus("Game Over! Out of time and attempts.")
-      
-      // Navigate to result if they have some score
-      let s = 0
-      if (score >= 140) s = 3
-      else if (score >= 130) s = 2.5
-      else if (score >= 120) s = 2
-      else if (score >= 100) s = 1
-      
-      if (s > 0) {
-        setTimeout(() => {
-          navigate("/result", { state: { score, stars: s, hasGift: score >= 140, level: levelNo } })
-        }, 1500)
-      }
+      return
+    }
+
+    setAttempts(0)
+    setIsGameOver(true)
+    setStatus("Game Over! Out of time and attempts.")
+
+    let s = 0
+    if (score >= 125) s = 3
+    else if (score >= 100) s = 2
+    else if (score >= 75) s = 1
+
+    if (s > 0) {
+      const marks = getLevelMarks(score)
+      setTimeout(() => {
+        navigate("/result", { state: { score, marks, stars: s, hasGift: score >= 125, level: levelNo, time: getElapsedLevelSeconds() } })
+      }, 1500)
     }
   }
 
   function resetGame() {
+    levelStartedAtRef.current = Date.now()
     setPuzzleCount(1)
     setAttempts(3)
-    setSeconds(60) // Reset to 1:00 (60s)
+    setSeconds(60)
     setIsGameOver(false)
     setScore(0)
     setStars(0)
@@ -94,61 +104,74 @@ export default function Game() {
   async function loadPuzzle() {
     try {
       setStatus("")
-      setHint("")
       setAnswer("")
-      setSelectedMissing(false)
-      setResultMark("idle")
-      
-      // Level < 5: equations (internal), Level >= 5: external (Banana API)
-      const targetMode = levelNo >= 5 ? "external" : "equations"
-      const r = await api.get("/game/puzzle", { params: { difficulty, mode: targetMode } })
+
+      // Always use Banana API for levels 1-5
+      const r = await api.get("game/puzzle/")
       setPuzzle(r.data)
     } catch (err) {
       setPuzzle(null)
-      setStatus("Failed to load puzzle")
-      console.error("Load puzzle error", err?.response?.status, err?.response?.data || err?.message)
+      const errorMsg = err?.response?.data?.error || err?.message
+      setStatus(`Failed to load puzzle: ${errorMsg}`)
+      console.error("Load puzzle error details:", {
+        status: err?.response?.status,
+        data: err?.response?.data,
+        msg: err?.message
+      })
     }
   }
 
   async function submit() {
     if (!puzzle || isGameOver || isPaused) return
-    
+
     const correct = String(puzzle.solution) === String(answer)
     setAnswer("") // Automatically clear the input field after clicking submit
-    
+
     if (correct) {
       setStatus("Correct")
-      setResultMark("correct")
-      
+
       // Attempt-based scoring
       let earned = 0
       if (attempts === 3) earned = 50
       else if (attempts === 2) earned = 25
       else if (attempts === 1) earned = 10
-      
+
       const newScore = score + earned
       setScore(newScore)
-      await api.post("/game/submit", { puzzleId: puzzle.id, seconds: 60 - seconds, earned })
-      
+
+      // Optional: Log completion to backend (if endpoint exists)
+      // await api.post("game/submit", { puzzleId: puzzle.id, earned })
+
       if (puzzleCount < 3) {
         setTimeout(() => {
           setPuzzleCount(prev => prev + 1)
           setAttempts(3) // Reset attempts for next puzzle
+          setSeconds(60)
           loadPuzzle()
         }, 1000)
       } else {
-        // Calculate stars based on final total score (Max 150)
+        // Calculate stars based on final total score
+        // Requirement: 125+ score = 3 stars + Gift Box
         let s = 0
-        if (newScore >= 150) s = 3
-        else if (newScore >= 120) s = 2
-        else if (newScore >= 100) s = 1
-        
+        let hasGift = false
+
+        if (newScore >= 125) {
+          s = 3
+          hasGift = true
+        } else if (newScore >= 100) {
+          s = 2
+        } else if (newScore >= 75) {
+          s = 1
+        }
+
         setStars(s)
-        const hasGift = newScore >= 110
+        setHasGift(hasGift)
+
         if (s > 0 || hasGift) {
           setStatus("Level Complete!")
+          const marks = getLevelMarks(newScore)
           setTimeout(() => {
-            navigate("/result", { state: { score: newScore, stars: s, hasGift, level: levelNo } })
+            navigate("/result", { state: { score: newScore, marks, stars: s, hasGift, level: levelNo, time: getElapsedLevelSeconds() } })
           }, 1500)
         } else {
           setStatus("Failed! Try Again")
@@ -158,22 +181,28 @@ export default function Game() {
     } else {
       const nextAttempts = attempts - 1
       setAttempts(nextAttempts)
-      setResultMark("wrong")
-      
+
       if (nextAttempts > 0) {
         setStatus("Not Correct! Try again.")
       } else {
         setStatus("Not Correct! Out of attempts.")
-        // Calculate stars based on current score even if failed this puzzle (Max 150)
+        // Calculate stars based on current score
         let s = 0
-        if (score >= 150) s = 3
-        else if (score >= 120) s = 2
-        else if (score >= 100) s = 1
-        
-        const hasGift = score >= 110
+        let hasGift = false
+
+        if (score >= 125) {
+          s = 3
+          hasGift = true
+        } else if (score >= 100) {
+          s = 2
+        } else if (score >= 75) {
+          s = 1
+        }
+
         if (s > 0 || hasGift) {
+          const marks = getLevelMarks(score)
           setTimeout(() => {
-            navigate("/result", { state: { score, stars: s, hasGift, level: levelNo } })
+            navigate("/result", { state: { score, marks, stars: s, hasGift, level: levelNo, time: getElapsedLevelSeconds() } })
           }, 1500)
         } else {
           setIsGameOver(true)
@@ -182,54 +211,29 @@ export default function Game() {
     }
   }
 
+  function getElapsedLevelSeconds() {
+    return Math.max(0, Math.floor((Date.now() - levelStartedAtRef.current) / 1000))
+  }
+
+  function getLevelMarks(totalScore) {
+    if (totalScore >= 125) return 150
+    if (totalScore >= 100) return 110
+    if (totalScore >= 75) return 80
+    return totalScore
+  }
+
   function formatTime(s) {
     const mins = Math.floor(s / 60)
     const secs = s % 60
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  function revealHint() {
-    if (!puzzle) return
-    setHint(puzzle.hint || "")
-  }
-
-  const grid = useMemo(() => {
-    if (!puzzle) return []
-    if (puzzle.type === "equations") {
-      const out = []
-      for (let r = 0; r < puzzle.gridH; r++) {
-        const row = []
-        for (let c = 0; c < puzzle.gridW; c++) {
-          const idx = r * puzzle.gridW + c
-          const v = puzzle.tokens[idx]
-          const missing = puzzle.missingIndex === idx
-          row.push({ v, missing, r, c })
-        }
-        out.push(row)
-      }
-      return out
-    } else {
-      const out = []
-      for (let r = 0; r < puzzle.size; r++) {
-        const row = []
-        for (let c = 0; c < puzzle.size; c++) {
-          const idx = r * puzzle.size + c
-          const v = puzzle.values[idx]
-          const missing = puzzle.missingIndex === idx
-          row.push({ v, missing, r, c })
-        }
-        out.push(row)
-      }
-      return out
-    }
-  }, [puzzle])
-
   return (
     <div className="min-h-screen relative flex flex-col" style={{ backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}>
       {/* Level Number Indicator - Left Side */}
       <div className="absolute left-4 top-24 z-30">
-        <div className="bg-[#8b5a2b] border-4 border-[#5d3a1a] rounded-2xl p-3 shadow-[0_4px_0_0_#3d2611] text-white flex flex-col items-center min-w-[80px]">
-          <span className="text-[10px] font-black uppercase italic tracking-widest text-white/60">Level</span>
+        <div className="bg-[#0a2f5e] border-4 border-cyan-500 rounded-2xl p-3 shadow-[0_4px_0_0_#07122d] text-white flex flex-col items-center min-w-[80px]">
+          <span className="text-[10px] font-black uppercase italic tracking-widest text-cyan-200/70">Level</span>
           <span className="text-4xl font-black italic tracking-tighter">{levelNo}</span>
         </div>
       </div>
@@ -237,9 +241,9 @@ export default function Game() {
       {/* Right Side Control Buttons */}
       <div className="absolute right-4 top-24 z-30 flex flex-col gap-4">
         {/* Play/Resume Button */}
-        <button 
+        <button
           onClick={() => setIsPaused(!isPaused)}
-          className={`w-16 h-16 rounded-2xl border-4 border-[#5d3a1a] flex items-center justify-center shadow-[0_4px_0_0_#3d2611] transition-all active:translate-y-1 active:shadow-none ${isPaused ? 'bg-[#4ba334] text-white animate-pulse' : 'bg-[#ffa500] text-[#5d3a1a]'}`}
+          className={`w-16 h-16 rounded-2xl border-4 border-cyan-600 flex items-center justify-center shadow-[0_4px_0_0_#07122d] transition-all active:translate-y-1 active:shadow-none ${isPaused ? 'bg-cyan-500 text-[#07122d] animate-pulse' : 'bg-orange-500 text-[#07122d]'}`}
           title={isPaused ? "Resume Game" : "Pause Game"}
         >
           {isPaused ? (
@@ -254,9 +258,9 @@ export default function Game() {
         </button>
 
         {/* Replay Button */}
-        <button 
+        <button
           onClick={() => { resetGame(); loadPuzzle() }}
-          className="w-16 h-16 bg-pink-500 text-white rounded-2xl border-4 border-pink-700 flex items-center justify-center shadow-[0_4px_0_0_#991b1b] transition-all active:translate-y-1 active:shadow-none"
+          className="w-16 h-16 bg-[#0a2f5e] text-cyan-200 rounded-2xl border-4 border-cyan-600 flex items-center justify-center shadow-[0_4px_0_0_#07122d] transition-all active:translate-y-1 active:shadow-none"
           title="Restart Level"
         >
           <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
@@ -266,11 +270,11 @@ export default function Game() {
       </div>
 
       {/* Top Navbar */}
-      <nav className="h-16 bg-slate-800/90 border-b border-slate-700 flex items-center px-4 md:px-8 gap-6 z-20">
+      <nav className="h-16 bg-[#0a1c3d]/95 border-b border-cyan-500/30 flex items-center px-4 md:px-8 gap-6 z-20">
         <div className="flex items-center gap-2 mr-4">
-          <button 
+          <button
             onClick={() => navigate("/home")}
-            className="w-10 h-10 bg-pink-500 rounded-xl flex items-center justify-center shadow-lg hover:bg-pink-600 transition-colors"
+            className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg hover:bg-orange-600 transition-colors"
           >
             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -278,48 +282,48 @@ export default function Game() {
           </button>
         </div>
 
-        <div className="hidden md:flex items-center gap-8 text-sm font-bold uppercase tracking-wider text-slate-300">
-          <button onClick={() => navigate("/home")} className="hover:text-white transition-colors">Home</button>
-          <button className="hover:text-white transition-colors">Learn</button>
-          <button onClick={() => navigate("/leaderboard")} className="hover:text-white transition-colors">Leaderboard</button>
-          <button className="hover:text-white transition-colors">Shop</button>
-          <button className="hover:text-white transition-colors">Community</button>
+        <div className="hidden md:flex items-center gap-8 text-sm font-bold uppercase tracking-wider text-cyan-100/80">
+          <button onClick={() => navigate("/home")} className="hover:text-cyan-200 transition-colors">Home</button>
+          <button className="hover:text-cyan-200 transition-colors">Learn</button>
+          <button onClick={() => navigate("/leaderboard")} className="hover:text-cyan-200 transition-colors">Leaderboard</button>
+          <button className="hover:text-cyan-200 transition-colors">Shop</button>
+          <button className="hover:text-cyan-200 transition-colors">Community</button>
         </div>
 
         <div className="flex-1" />
 
         <div className="flex items-center gap-4 text-sm font-bold">
           {/* Diamonds */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#0e2a26] border border-[#1d4d46] rounded-full text-[#22c55e]">
-            <div className="w-7 h-7 bg-[#22c55e] rounded-lg flex items-center justify-center shadow-lg">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-cyan-950/70 border border-cyan-400/40 rounded-full text-cyan-300">
+            <div className="w-7 h-7 bg-cyan-500 rounded-lg flex items-center justify-center shadow-lg">
               <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
               </svg>
             </div>
-            <span className="text-lg font-black">{user?.stats?.diamonds || 0}</span>
+            <span className="text-lg font-black">{user?.profile?.diamonds || 0}</span>
           </div>
 
           {/* Gifts */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2a2a18] border border-[#4d4d2a] rounded-full text-[#fbbf24]">
-            <div className="w-7 h-7 bg-[#fbbf24] rounded-lg flex items-center justify-center shadow-lg">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-950/40 border border-orange-400/40 rounded-full text-orange-300">
+            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg">
               <span className="text-sm">🎁</span>
             </div>
-            <span className="text-lg font-black">{user?.stats?.gifts || 0}</span>
+            <span className="text-lg font-black">{user?.profile?.gifts || 0}</span>
           </div>
 
           {/* User Profile */}
-          <div 
+          <div
             onClick={() => navigate("/account")}
-            className="flex items-center gap-3 pl-4 border-l border-slate-700 cursor-pointer group hover:bg-slate-700/50 transition-colors"
+            className="flex items-center gap-3 pl-4 border-l border-cyan-400/30 cursor-pointer group hover:bg-cyan-900/20 transition-colors"
           >
-            <div className="w-10 h-10 bg-pink-500 rounded-full flex items-center justify-center overflow-hidden border-2 border-slate-600 group-hover:border-white transition-colors">
+            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center overflow-hidden border-2 border-cyan-500/40 group-hover:border-cyan-300 transition-colors">
               <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="flex flex-col">
-              <span className="text-white text-xs font-black uppercase tracking-tight group-hover:text-pink-400 transition-colors">{user?.username || "Guest"}</span>
-              <span className="text-pink-500 text-[10px] font-bold uppercase tracking-widest">{user?.stats?.rank || "Novice"}</span>
+              <span className="text-white text-xs font-black uppercase tracking-tight group-hover:text-cyan-300 transition-colors">{user?.username || "Guest"}</span>
+              <span className="text-orange-300 text-[10px] font-bold uppercase tracking-widest">{user?.profile?.rank || "Novice"}</span>
             </div>
           </div>
         </div>
@@ -328,12 +332,11 @@ export default function Game() {
       <div className="flex-1 flex items-center justify-center px-4 py-8">
         <div className="border-beam rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl">
           <div className="bg-white p-4 md:p-6 min-h-[400px] flex flex-col">
-            
+
             {/* Header section matching the image */}
             <div className="mb-4">
-              <div className="flex justify-end items-start">
-                {/* Timer Box */}
-                <div className="bg-gradient-to-r from-orange-400 to-pink-500 text-white text-3xl md:text-5xl font-bold px-6 py-2 rounded-2xl shadow-lg min-w-[140px] text-center">
+              <div className="flex justify-center items-start">
+                <div className="bg-gradient-to-r from-[#0a2f5e] via-cyan-500 to-orange-500 text-white text-3xl md:text-5xl font-bold px-6 py-2 rounded-2xl shadow-lg min-w-[140px] text-center">
                   {formatTime(seconds)}
                 </div>
               </div>
@@ -346,8 +349,8 @@ export default function Game() {
                 <span>Attempts:</span>
                 <div className="flex gap-1">
                   {[1, 2, 3].map(i => (
-                    <div 
-                      key={i} 
+                    <div
+                      key={i}
                       className={`w-3 h-3 rounded-full ${i <= attempts ? "bg-red-500" : "bg-slate-200"}`}
                     />
                   ))}
@@ -358,66 +361,38 @@ export default function Game() {
             {/* The Grid area */}
             <div className="flex-1 flex items-center justify-center my-4 relative">
               {isPaused && (
-                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl animate-in fade-in duration-300">
-                  <div className="text-[#5d3a1a] text-4xl font-black italic uppercase tracking-tighter mb-4">GAME PAUSED</div>
-                  <button 
+                <div className="absolute inset-0 bg-[#07122d]/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl animate-in fade-in duration-300">
+                  <div className="text-cyan-200 text-4xl font-black italic uppercase tracking-tighter mb-4">GAME PAUSED</div>
+                  <button
                     onClick={() => setIsPaused(false)}
-                    className="bg-[#4ba334] text-white px-8 py-3 rounded-full font-black italic uppercase shadow-lg hover:scale-110 transition-transform"
+                    className="bg-orange-500 text-[#07122d] px-8 py-3 rounded-full font-black italic uppercase shadow-lg hover:scale-110 transition-transform"
                   >
                     RESUME 🎮
                   </button>
                 </div>
               )}
-              {puzzle?.type === "external" && (
-                <div className="w-full max-w-lg bg-white p-2 rounded-lg shadow-sm border border-gray-100">
-                  <img src={puzzle.question} alt="Banana Puzzle" className="w-full h-auto object-contain" />
+              {!puzzle && status.includes("Failed") && (
+                <div className="flex flex-col items-center justify-center p-8 bg-red-50 rounded-xl border-2 border-red-100">
+                  <span className="text-red-500 font-bold mb-4">{status}</span>
+                  <button
+                    onClick={loadPuzzle}
+                    className="bg-orange-500 text-[#07122d] px-6 py-2 rounded-full font-bold hover:bg-orange-600 transition-colors"
+                  >
+                    Retry Loading Puzzle
+                  </button>
                 </div>
               )}
-
-              {puzzle?.type === "equations" && (
-                <div 
-                  className="grid gap-0 bg-white border border-gray-100 shadow-sm" 
-                  style={{ 
-                    gridTemplateColumns: `repeat(${puzzle.gridW}, minmax(40px, 1fr))`,
-                    maxWidth: "600px",
-                    width: "100%"
-                  }}
-                >
-                  {grid.map((row, ri) =>
-                    row.map((cell, ci) => {
-                      const isOp = ["+", "=", "x", "×", "-", "−", "÷"].includes(cell.v)
-                      
-                      return (
-                        <div
-                          key={`${ri}-${ci}`}
-                          className={`
-                            aspect-square flex items-center justify-center text-2xl md:text-4xl font-bold border-[0.5px] border-gray-100
-                            ${cell.missing && selectedMissing ? "bg-yellow-50/50" : ""}
-                          `}
-                          onClick={() => { if (cell.missing) setSelectedMissing(true) }}
-                        >
-                          {isOp ? (
-                            <div className="text-red-500">{cell.v}</div>
-                          ) : (
-                            <div className="text-blue-600 tracking-[0.5em] flex items-center justify-center w-full">
-                              {cell.v.split("").map((digit, di) => {
-                                const isMissingDigit = cell.missing && di === puzzle.digitIndex
-                                return (
-                                  <span key={di} className="relative inline-flex items-center justify-center">
-                                    {isMissingDigit ? (
-                                      <span className="text-3xl md:text-4xl animate-pulse mx-[-0.1em]">{currentEmoji}</span>
-                                    ) : (
-                                      digit
-                                    )}
-                                  </span>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })
-                  )}
+              {puzzle?.type === "external" && (
+                <div className="w-full max-w-lg bg-white p-2 rounded-lg shadow-sm border border-gray-100 flex items-center justify-center min-h-[300px]">
+                  <img
+                    src={puzzle.question}
+                    alt="Banana Puzzle"
+                    className="w-full h-auto object-contain"
+                    onError={(e) => {
+                      console.error("Image load failed", e);
+                      setStatus("Failed to load puzzle image");
+                    }}
+                  />
                 </div>
               )}
             </div>
@@ -444,54 +419,55 @@ export default function Game() {
               )}
 
               {status && (
-                <div className={`mb-4 text-xl font-bold italic ${status==="Correct" || status==="Level Complete!" ? "text-green-600" : "text-black"}`}>
+                <div className={`mb-2 text-xl font-bold italic ${status.includes("Correct") || status === "Level Complete!" ? "text-green-600" : "text-red-500"}`}>
                   {status}!
                 </div>
               )}
 
               <div className="text-lg font-bold text-black mb-3 italic">Quest is ready.</div>
-              
+
               <div className="flex flex-col md:flex-row items-center gap-3">
                 <div className="text-base font-bold text-black flex items-center gap-2">
                   Enter the missing digit:
                   <input
                     inputMode="numeric"
                     value={answer}
-                    onChange={e=>setAnswer(e.target.value.replace(/\D/g,""))}
+                    onChange={e => setAnswer(e.target.value.replace(/\D/g, ""))}
                     disabled={isPaused}
                     className="w-16 h-10 text-xl text-center rounded-lg bg-gradient-to-r from-orange-400 to-red-400 text-white font-bold border-none shadow-sm focus:ring-4 ring-orange-200 outline-none disabled:opacity-50"
                     autoFocus
                   />
                 </div>
-                
-                <div className="flex gap-2 ml-auto">
-                  <button onClick={revealHint} disabled={isPaused} className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 disabled:opacity-50 text-blue-700 font-bold rounded-lg text-xs transition-colors">Hint</button>
-                  <button onClick={submit} disabled={isPaused} className="px-4 py-1.5 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-bold rounded-lg text-xs shadow-md transition-all active:scale-95">Submit</button>
+
+                <div className="flex gap-2 ml-auto items-center">
+                  <button onClick={submit} disabled={isPaused} className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-[#07122d] font-bold rounded-lg text-xs shadow-md transition-all active:scale-95">Submit</button>
                   <div className="flex gap-1">
-                    <button 
+                    <button
                       onClick={() => {
                         if (puzzleCount > 1) {
                           setPuzzleCount(p => p - 1)
                           setAttempts(3)
+                          setSeconds(60)
                           loadPuzzle()
                         }
-                      }} 
+                      }}
                       disabled={puzzleCount <= 1 || isPaused}
-                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-600 font-bold rounded-lg text-lg transition-colors leading-none"
+                      className="px-3 py-1.5 bg-cyan-50 hover:bg-cyan-100 disabled:opacity-50 text-[#0a2f5e] font-bold rounded-lg text-lg transition-colors leading-none"
                       title="Previous Puzzle"
                     >
                       ←
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         if (puzzleCount < 3) {
                           setPuzzleCount(p => p + 1)
                           setAttempts(3)
+                          setSeconds(60)
                           loadPuzzle()
                         }
-                      }} 
+                      }}
                       disabled={puzzleCount >= 3 || isPaused}
-                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-600 font-bold rounded-lg text-lg transition-colors leading-none"
+                      className="px-3 py-1.5 bg-cyan-50 hover:bg-cyan-100 disabled:opacity-50 text-[#0a2f5e] font-bold rounded-lg text-lg transition-colors leading-none"
                       title="Next Puzzle"
                     >
                       →
@@ -499,13 +475,13 @@ export default function Game() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mt-3 flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                 <span>Total Score: {score}</span>
                 {isGameOver && (
-                  <button 
-                    onClick={resetGame} 
-                    className="text-blue-600 hover:underline font-black"
+                  <button
+                    onClick={resetGame}
+                    className="text-cyan-700 hover:underline font-black"
                   >
                     Play Again
                   </button>
