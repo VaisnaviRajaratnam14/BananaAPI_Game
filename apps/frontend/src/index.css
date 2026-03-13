@@ -329,6 +329,60 @@ html, body, #root {
   }
 }
 
+.landing-aurora-text {
+  font-family: "Luckiest Guy", cursive;
+  background: linear-gradient(110deg, #041c5a 10%, #ffffff 42%, #22d3ee 70%, #0c3b96 95%);
+  background-size: 230% 230%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0;
+  -webkit-text-stroke: 1px rgba(7, 25, 77, 0.8);
+  text-shadow: 0 0 16px rgba(34, 211, 238, 0.28), 0 0 28px rgba(12, 59, 150, 0.26);
+  animation: landing-title-fade 900ms ease-out 120ms forwards, landing-aurora-shift 6s ease-in-out 1.1s infinite;
+}
+
+.landing-enter-text {
+  opacity: 0;
+  animation: landing-enter-rise 850ms ease-out 420ms forwards;
+}
+
+@keyframes landing-title-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes landing-aurora-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes landing-enter-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .confetti-blast {
   position: absolute;
   inset: -120px -160px -120px -160px;
@@ -346,6 +400,81 @@ html, body, #root {
   height: 320px;
   transform: translate(-50%, -50%);
   opacity: 0.95;
+}
+
+.math-terminal-shell {
+  border: 2px solid rgba(34, 211, 238, 0.55);
+  background: radial-gradient(circle at 30% 25%, rgba(34, 211, 238, 0.14), rgba(2, 6, 23, 0.9));
+  box-shadow: inset 0 0 0 2px rgba(125, 211, 252, 0.15), 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.math-terminal-badge {
+  font-family: "Luckiest Guy", cursive;
+  color: #7dd3fc;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+}
+
+.math-terminal-question {
+  font-family: "Luckiest Guy", cursive;
+  font-size: clamp(1.4rem, 3.3vw, 2.4rem);
+  line-height: 1.15;
+  color: #e0f2fe;
+  letter-spacing: 0.03em;
+}
+
+.math-terminal-answer {
+  min-width: 130px;
+  min-height: 52px;
+  padding: 0.4rem 1rem;
+  border-radius: 14px;
+  border: 2px solid rgba(56, 189, 248, 0.55);
+  background: rgba(8, 18, 38, 0.9);
+  color: #67e8f9;
+  font-family: "Luckiest Guy", cursive;
+  font-size: 2rem;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.math-key-btn {
+  border-radius: 12px;
+  border: 2px solid rgba(56, 189, 248, 0.5);
+  background: linear-gradient(180deg, rgba(8, 47, 73, 0.95), rgba(3, 20, 44, 0.95));
+  color: #e0f2fe;
+  font-family: "Luckiest Guy", cursive;
+  font-size: 1.1rem;
+  min-height: 44px;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.math-key-btn:hover {
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.45);
+}
+
+.math-key-btn:active {
+  transform: translateY(1px);
+}
+
+.math-submit-btn {
+  font-family: "Luckiest Guy", cursive;
+  border-radius: 14px;
+  border: 2px solid rgba(186, 230, 253, 0.55);
+  background: linear-gradient(180deg, #f59e0b, #ea580c);
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.55rem 1.8rem;
+  font-size: 1.2rem;
+  box-shadow: 0 6px 0 #9a3412;
+}
+
+.math-submit-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 0 #9a3412;
 }
 
 .confetti-piece {

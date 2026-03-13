@@ -6,7 +6,6 @@ export default function BackgroundMusic() {
   const [isPlaying, setIsPlaying] = useState(localStorage.getItem("musicEnabled") !== "false")
   const [volume, setVolume] = useState(parseFloat(localStorage.getItem("musicVolume") || "0.2"))
   const [loadError, setLoadError] = useState(false)
-  const [isBlocked, setIsBlocked] = useState(false)
   const audioRef = useRef(null)
   
   // Hide music on landing, login, register, otp pages
@@ -51,7 +50,8 @@ export default function BackgroundMusic() {
       const playPromise = audio.play()
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          setIsBlocked(true)
+          setIsPlaying(false)
+          localStorage.setItem("musicEnabled", "false")
         })
       }
     } else {
@@ -78,20 +78,10 @@ export default function BackgroundMusic() {
     localStorage.setItem("musicEnabled", newState)
     if (newState && audioRef.current) {
       audioRef.current.play().then(() => {
-        setIsBlocked(false)
       }).catch(() => {
-        setIsBlocked(true)
+        setIsPlaying(false)
+        localStorage.setItem("musicEnabled", "false")
       })
-    }
-  }
-
-  const handleStartMusic = () => {
-    if (audioRef.current) {
-      audioRef.current.play().then(() => {
-        setIsBlocked(false)
-        setIsPlaying(true)
-        localStorage.setItem("musicEnabled", "true")
-      }).catch(console.error)
     }
   }
 
@@ -108,18 +98,6 @@ export default function BackgroundMusic() {
 
   return (
     <>
-      {isBlocked && !isHidden && (
-        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center">
-          <button 
-            onClick={handleStartMusic}
-            className="bg-yellow-400 text-[#5d3a1a] px-8 py-4 rounded-full font-black italic uppercase shadow-2xl hover:scale-110 transition-transform flex items-center gap-3 animate-bounce"
-          >
-            <span className="text-3xl">🎵</span>
-            Tap to Start Music
-          </button>
-        </div>
-      )}
-
       <div 
         className="fixed bottom-6 left-6 z-50 flex items-center gap-3"
         onMouseLeave={() => setShowVolume(false)}

@@ -1,12 +1,21 @@
-import React, { useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import heroVideo from "../assets/Video_Generation_With_Edits.mp4"
+import heroVideo from "../assets/videob.mp4"
 import quizBtn from "../assets/Quiz button.webm"
 
 export default function Dashboard() {
   const navigate = useNavigate()
   const videoRef = useRef(null)
   const [muted, setMuted] = useState(true)
+
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    const tryPlay = () => v.play().catch(() => {})
+    tryPlay()
+    v.addEventListener("loadeddata", tryPlay)
+    return () => v.removeEventListener("loadeddata", tryPlay)
+  }, [])
 
   return (
     <div className="relative min-h-screen">
@@ -17,6 +26,7 @@ export default function Dashboard() {
         autoPlay
         loop
         muted={muted}
+        preload="auto"
         playsInline
       />
       <button

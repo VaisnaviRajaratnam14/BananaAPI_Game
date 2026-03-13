@@ -7,6 +7,14 @@ export default function Home() {
   const navigate = useNavigate()
   const { user, token, setUser } = useAuth()
 
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1)
+      return
+    }
+    navigate("/dashboard")
+  }
+
   useEffect(() => {
     async function fetchStats() {
       if (!token) return
@@ -31,16 +39,29 @@ export default function Home() {
     return levelData ? levelData.stars_earned : 0
   }
 
-  const canUnlock4 = getStars(1) >= 3 && getStars(2) >= 3 && getStars(3) >= 3
-
-  const levels = [
-    { id: 1, x: 8, y: 74, status: profile.current_level > 1 ? "completed" : profile.current_level === 1 ? "current" : "locked", stars: getStars(1) },
-    { id: 2, x: 25, y: 62, status: profile.current_level > 2 ? "completed" : profile.current_level === 2 ? "current" : "locked", stars: getStars(2) },
-    { id: 3, x: 45, y: 70, status: profile.current_level > 3 ? "completed" : profile.current_level === 3 ? "current" : "locked", stars: getStars(3) },
-    { id: 4, x: 58, y: 49, status: canUnlock4 ? (profile.current_level > 4 ? "completed" : profile.current_level === 4 ? "current" : "locked") : "locked", stars: getStars(4) },
-    { id: 5, x: 74, y: 60, status: profile.current_level > 5 ? "completed" : profile.current_level === 5 ? "current" : "locked", stars: getStars(5) },
-    { id: 6, x: 90, y: 46, status: profile.current_level > 6 ? "completed" : profile.current_level === 6 ? "current" : "locked", stars: getStars(6) },
+  const levelPoints = [
+    { id: 1, x: 8, y: 76 },
+    { id: 2, x: 20, y: 64 },
+    { id: 3, x: 34, y: 70 },
+    { id: 4, x: 47, y: 58 },
+    { id: 5, x: 61, y: 65 },
+    { id: 6, x: 74, y: 52 },
+    { id: 7, x: 86, y: 59 },
+    { id: 8, x: 74, y: 36 },
+    { id: 9, x: 58, y: 29 },
+    { id: 10, x: 89, y: 18 },
   ]
+
+  const levels = levelPoints.map((point) => ({
+    ...point,
+    status:
+      profile.current_level > point.id
+        ? "completed"
+        : profile.current_level === point.id
+          ? "current"
+          : "locked",
+    stars: getStars(point.id),
+  }))
 
   const maxLevelId = levels[levels.length - 1]?.id || 1
   const heroLevelId = Math.min(profile.current_level || 1, maxLevelId)
@@ -51,12 +72,12 @@ export default function Home() {
       {/* Top Navbar */}
       <nav className="h-16 bg-[#050d22]/70 backdrop-blur-md border-b border-cyan-400/25 flex items-center px-4 md:px-8 gap-6 z-20">
         <button
-          onClick={() => navigate("/home")}
+          onClick={handleBack}
           className="flex items-center gap-2 mr-4 hover:scale-110 transition-transform"
         >
           <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </div>
         </button>
@@ -124,14 +145,14 @@ export default function Home() {
           <div className="mx-auto w-full max-w-7xl h-full rounded-[24px] border border-cyan-300/20 bg-white/5 backdrop-blur-[1px] overflow-hidden relative">
             <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
               <path
-                d="M 8 74 C 14 67, 18 64, 25 62 C 34 60, 38 72, 45 70 C 51 68, 54 51, 58 49 C 66 44, 69 62, 74 60 C 82 58, 86 48, 90 46"
+                d="M 8 76 C 12 71, 16 65, 20 64 C 25 63, 29 69, 34 70 C 40 71, 43 60, 47 58 C 53 55, 56 66, 61 65 C 67 64, 70 54, 74 52 C 80 49, 83 60, 86 59 C 84 51, 80 42, 74 36 C 68 32, 62 30, 58 29 C 70 27, 80 22, 89 18"
                 fill="none"
                 stroke="rgba(167,139,250,0.65)"
                 strokeWidth="1.2"
                 strokeLinecap="round"
               />
               <path
-                d="M 8 74 C 14 67, 18 64, 25 62 C 34 60, 38 72, 45 70 C 51 68, 54 51, 58 49 C 66 44, 69 62, 74 60 C 82 58, 86 48, 90 46"
+                d="M 8 76 C 12 71, 16 65, 20 64 C 25 63, 29 69, 34 70 C 40 71, 43 60, 47 58 C 53 55, 56 66, 61 65 C 67 64, 70 54, 74 52 C 80 49, 83 60, 86 59 C 84 51, 80 42, 74 36 C 68 32, 62 30, 58 29 C 70 27, 80 22, 89 18"
                 fill="none"
                 stroke="rgba(255,255,255,0.75)"
                 strokeWidth="0.35"
@@ -141,7 +162,7 @@ export default function Home() {
             </svg>
 
             <div
-              className="absolute z-20 transition-all duration-700 ease-out -translate-x-1/2 -translate-y-[82%]"
+              className="absolute z-20 pointer-events-none transition-all duration-700 ease-out -translate-x-1/2 -translate-y-[82%]"
               style={{ left: `${heroLevel.x}%`, top: `${heroLevel.y}%` }}
             >
               <div className="absolute left-1/2 top-[84%] -translate-x-1/2 w-[104px] h-[30px] rounded-[999px] bg-[linear-gradient(180deg,#696a87_0%,#2d2d48_100%)] border border-cyan-200/35 shadow-[inset_0_2px_0_rgba(255,255,255,0.22),0_8px_16px_rgba(0,0,0,0.45)]" />
