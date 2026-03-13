@@ -1,18 +1,35 @@
 import React from "react"
 import { useNavigate } from "react-router-dom"
+import welcomeBg from "../assets/welcome.jpg"
 
 export default function Landing() {
   const navigate = useNavigate()
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="glass p-10 rounded-3xl max-w-xl text-center">
-        <div className="text-5xl font-extrabold text-banana-dark mb-4 animate-pulse">Welcome</div>
-        <div className="text-lg text-black/70 mb-8">A modern banana-themed math puzzle</div>
+    <div
+      className="relative min-h-screen flex items-center justify-center px-4"
+      style={{
+        backgroundImage: `url(${welcomeBg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(12,34,86,0.35),rgba(5,10,35,0.72))]" />
+
+      <div className="relative z-10 w-full max-w-4xl text-center">
+        <h1 className="landing-aurora-text text-5xl md:text-7xl lg:text-8xl font-black uppercase tracking-tight leading-[0.9] mb-5">
+          Welcome to
+          <span className="block">Brain Adventure</span>
+        </h1>
+
+        <p className="landing-enter-text text-lg md:text-2xl font-bold text-cyan-100/90 mb-10 uppercase tracking-[0.15em]">
+          Come join the adventure
+        </p>
+
         <button
           onClick={() => navigate("/login")}
-          className="px-6 py-3 rounded-xl bg-banana text-black font-semibold hover:bg-banana-dark transition"
+          className="px-10 py-4 rounded-2xl bg-orange-500 hover:bg-orange-400 text-white font-black italic uppercase tracking-wider border-2 border-orange-200/60 shadow-[0_8px_0_#c2410c] hover:shadow-[0_5px_0_#c2410c] transition-all active:translate-y-1 active:shadow-[0_3px_0_#c2410c]"
         >
-          Start Game
+          Start
         </button>
       </div>
     </div>

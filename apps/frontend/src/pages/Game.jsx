@@ -13,6 +13,7 @@ export default function Game() {
   const { token, user } = useAuth()
   const location = useLocation()
   const levelNo = location.state?.level || 1
+  const isMathMode = levelNo >= 6
   const api = withAuth(token)
   const [puzzle, setPuzzle] = useState(null)
   const [answer, setAnswer] = useState("")
@@ -44,8 +45,20 @@ export default function Game() {
   const [stars, setStars] = useState(0) // 0, 1, 2, 2.5, 3
   const [hasGift, setHasGift] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
+  const [showLevelShift, setShowLevelShift] = useState(false)
   const levelStartedAtRef = useRef(Date.now())
   const confettiHostRef = useRef(null)
+
+  const getTimerTickMs = (level) => {
+    if (level <= 5) return 1000
+    if (level === 6) return 950
+    if (level === 7) return 900
+    if (level === 8) return 820
+    if (level === 9) return 740
+    return 680
+  }
+
+  const getRoundSeconds = () => 60
 
   const currentEmoji = attempts === 3 ? "🍌" : "😊"
 
@@ -60,14 +73,23 @@ export default function Game() {
     if (isPaused || isGameOver || !puzzle) return
 
     if (seconds > 0) {
-      const timer = setInterval(() => setSeconds((s) => s - 1), 1000)
-      return () => clearInterval(timer)
+      const timer = setTimeout(() => setSeconds((s) => Math.max(0, s - 1)), getTimerTickMs(levelNo))
+      return () => clearTimeout(timer)
     }
 
     if (seconds === 0) {
       handleTimeout()
     }
-  }, [seconds, isPaused, isGameOver, puzzle])
+  }, [seconds, isPaused, isGameOver, puzzle, levelNo])
+
+  useEffect(() => {
+    if (levelNo === 6) {
+      setShowLevelShift(true)
+      const id = setTimeout(() => setShowLevelShift(false), 2200)
+      return () => clearTimeout(id)
+    }
+    setShowLevelShift(false)
+  }, [levelNo])
 
   useEffect(() => {
     if (!status.includes("Not Correct")) return
@@ -95,7 +117,7 @@ export default function Game() {
     const nextAttempts = attempts - 1
     if (nextAttempts > 0) {
       setAttempts(nextAttempts)
-      setSeconds(60)
+      setSeconds(getRoundSeconds())
       setStatus(`Time's up! Attempt ${4 - nextAttempts} of 3`)
       return
     }
@@ -121,7 +143,7 @@ export default function Game() {
     levelStartedAtRef.current = Date.now()
     setPuzzleCount(1)
     setAttempts(3)
-    setSeconds(60)
+    setSeconds(getRoundSeconds())
     setIsGameOver(false)
     setScore(0)
     setStars(0)
@@ -135,8 +157,7 @@ export default function Game() {
       setStatus("")
       setAnswer("")
 
-      // Always use Banana API for levels 1-5
-      const r = await api.get("game/puzzle/")
+      const r = await api.get("game/puzzle/", { params: { level: levelNo, puzzle: puzzleCount } })
       setPuzzle(r.data)
     } catch (err) {
       setPuzzle(null)
@@ -153,7 +174,8 @@ export default function Game() {
   async function submit() {
     if (!puzzle || isGameOver || isPaused) return
 
-    const correct = String(puzzle.solution) === String(answer)
+    const expected = puzzle.correct_answer ?? puzzle.solution
+    const correct = String(expected) === String(answer)
     setAnswer("") // Automatically clear the input field after clicking submit
 
     if (correct) {
@@ -177,7 +199,7 @@ export default function Game() {
         setTimeout(() => {
           setPuzzleCount(prev => prev + 1)
           setAttempts(3) // Reset attempts for next puzzle
-          setSeconds(60)
+          setSeconds(getRoundSeconds())
           loadPuzzle()
         }, 1000)
       } else {
@@ -261,11 +283,25 @@ export default function Game() {
 
   return (
     <div className="min-h-screen relative flex flex-col" style={{ backgroundImage: `url(${bgImage})`, backgroundSize: "cover", backgroundPosition: "center" }}>
+      {showLevelShift && (
+        <div className="absolute inset-0 z-40 bg-[#030b22]/85 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center animate-in zoom-in duration-500">
+            <div className="text-cyan-300 text-sm md:text-base font-black uppercase tracking-[0.3em]">Level Up</div>
+            <div className="text-4xl md:text-6xl font-black uppercase text-white mt-2">Math Terminal</div>
+            <div className="text-cyan-200/80 text-sm md:text-lg font-bold uppercase tracking-[0.2em] mt-2">Mechanics Shift Unlocked</div>
+          </div>
+        </div>
+      )}
+
       {/* Level Number Indicator - Left Side */}
-      <div className="absolute left-4 top-24 z-30">
+      <div className="absolute left-4 top-24 z-30 flex flex-col gap-2">
         <div className="bg-[#0a2f5e] border-4 border-cyan-500 rounded-2xl p-3 shadow-[0_4px_0_0_#07122d] text-white flex flex-col items-center min-w-[80px]">
           <span className="text-[10px] font-black uppercase italic tracking-widest text-cyan-200/70">Level</span>
           <span className="text-4xl font-black italic tracking-tighter">{levelNo}</span>
+        </div>
+        <div className={`border-4 rounded-2xl p-3 shadow-[0_4px_0_0_#07122d] text-white flex flex-col items-center min-w-[80px] ${isMathMode ? 'bg-purple-900 border-purple-400' : 'bg-orange-900 border-orange-400'}`}>
+          <span className="text-[10px] font-black uppercase italic tracking-widest text-cyan-200/70">Score</span>
+          <span className={`text-3xl font-black italic tracking-tighter ${isMathMode ? 'text-purple-200' : 'text-orange-200'}`}>{score}</span>
         </div>
       </div>
 
@@ -274,7 +310,7 @@ export default function Game() {
         {/* Play/Resume Button */}
         <button
           onClick={() => setIsPaused(!isPaused)}
-          className={`w-16 h-16 rounded-2xl border-4 border-cyan-600 flex items-center justify-center shadow-[0_4px_0_0_#07122d] transition-all active:translate-y-1 active:shadow-none ${isPaused ? 'bg-cyan-500 text-[#07122d] animate-pulse' : 'bg-orange-500 text-[#07122d]'}`}
+          className={`w-16 h-16 rounded-2xl border-4 border-cyan-600 flex items-center justify-center shadow-[0_4px_0_0_#07122d] transition-all active:translate-y-1 active:shadow-none ${isPaused ? 'bg-cyan-500 text-[#07122d] animate-pulse' : isMathMode ? 'bg-purple-500 text-white' : 'bg-orange-500 text-[#07122d]'}`}
           title={isPaused ? "Resume Game" : "Pause Game"}
         >
           {isPaused ? (
@@ -305,20 +341,12 @@ export default function Game() {
         <div className="flex items-center gap-2 mr-4">
           <button
             onClick={() => navigate("/home")}
-            className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg hover:bg-orange-600 transition-colors"
+            className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg transition-colors ${isMathMode ? 'bg-purple-500 hover:bg-purple-600' : 'bg-orange-500 hover:bg-orange-600'}`}
           >
             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
           </button>
-        </div>
-
-        <div className="hidden md:flex items-center gap-8 text-sm font-bold uppercase tracking-wider text-cyan-100/80">
-          <button onClick={() => navigate("/home")} className="hover:text-cyan-200 transition-colors">Home</button>
-          <button className="hover:text-cyan-200 transition-colors">Learn</button>
-          <button onClick={() => navigate("/leaderboard")} className="hover:text-cyan-200 transition-colors">Leaderboard</button>
-          <button className="hover:text-cyan-200 transition-colors">Shop</button>
-          <button className="hover:text-cyan-200 transition-colors">Community</button>
         </div>
 
         <div className="flex-1" />
@@ -335,8 +363,8 @@ export default function Game() {
           </div>
 
           {/* Gifts */}
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-orange-950/40 border border-orange-400/40 rounded-full text-orange-300">
-            <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center shadow-lg">
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isMathMode ? 'bg-purple-950/40 border border-purple-400/40 text-purple-300' : 'bg-orange-950/40 border border-orange-400/40 text-orange-300'}`}>
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center shadow-lg ${isMathMode ? 'bg-purple-500' : 'bg-orange-500'}`}>
               <span className="text-sm">🎁</span>
             </div>
             <span className="text-lg font-black">{user?.profile?.gifts || 0}</span>
@@ -347,14 +375,14 @@ export default function Game() {
             onClick={() => navigate("/account")}
             className="flex items-center gap-3 pl-4 border-l border-cyan-400/30 cursor-pointer group hover:bg-cyan-900/20 transition-colors"
           >
-            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center overflow-hidden border-2 border-cyan-500/40 group-hover:border-cyan-300 transition-colors">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden border-2 border-cyan-500/40 group-hover:border-cyan-300 transition-colors ${isMathMode ? 'bg-purple-500' : 'bg-orange-500'}`}>
               <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
               </svg>
             </div>
             <div className="flex flex-col">
               <span className="text-white text-xs font-black uppercase tracking-tight group-hover:text-cyan-300 transition-colors">{user?.username || "Guest"}</span>
-              <span className="text-orange-300 text-[10px] font-bold uppercase tracking-widest">{user?.profile?.rank || "Novice"}</span>
+              <span className={`text-[10px] font-bold uppercase tracking-widest ${isMathMode ? 'text-purple-300' : 'text-orange-300'}`}>{user?.profile?.rank || "Novice"}</span>
             </div>
           </div>
         </div>
@@ -430,7 +458,7 @@ export default function Game() {
                   <div className="text-cyan-200 text-4xl font-black italic uppercase tracking-tighter mb-4">GAME PAUSED</div>
                   <button
                     onClick={() => setIsPaused(false)}
-                    className="bg-orange-500 text-[#07122d] px-8 py-3 rounded-full font-black italic uppercase shadow-lg hover:scale-110 transition-transform"
+                    className={`px-8 py-3 rounded-full font-black italic uppercase shadow-lg hover:scale-110 transition-transform ${isMathMode ? 'bg-purple-500 text-white' : 'bg-orange-500 text-[#07122d]'}`}
                   >
                     RESUME 🎮
                   </button>
@@ -441,7 +469,7 @@ export default function Game() {
                   <span className="text-red-500 font-bold mb-4">{status}</span>
                   <button
                     onClick={loadPuzzle}
-                    className="bg-orange-500 text-[#07122d] px-6 py-2 rounded-full font-bold hover:bg-orange-600 transition-colors"
+                    className={`px-6 py-2 rounded-full font-bold transition-colors ${isMathMode ? 'bg-purple-500 text-white hover:bg-purple-600' : 'bg-orange-500 text-[#07122d] hover:bg-orange-600'}`}
                   >
                     Retry Loading Puzzle
                   </button>
@@ -458,6 +486,52 @@ export default function Game() {
                       setStatus("Failed to load puzzle image");
                     }}
                   />
+                </div>
+              )}
+
+              {isMathMode && puzzle && (
+                <div className="math-terminal-shell w-full max-w-4xl min-h-[390px] p-5 md:p-8 rounded-2xl flex flex-col items-center justify-center">
+                  <div className="math-terminal-badge mb-4">Math Terminal</div>
+                  <div className="math-terminal-question text-center mb-4">
+                    {puzzle.question_text || puzzle.question}
+                  </div>
+                  <div className="text-cyan-200/70 text-xs md:text-sm font-bold uppercase tracking-[0.18em] mb-4">
+                    Difficulty x{puzzle.difficulty_multiplier ?? 1}
+                  </div>
+
+                  <div className="math-terminal-answer mb-4">{answer || "_"}</div>
+
+                  <div className="grid grid-cols-3 gap-2 md:gap-3 max-w-[260px] w-full">
+                    {["7", "8", "9", "4", "5", "6", "1", "2", "3", "C", "0", "←"].map((key) => (
+                      <button
+                        key={key}
+                        onClick={() => {
+                          if (isPaused || isGameOver) return
+                          if (key === "C") {
+                            setAnswer("")
+                            return
+                          }
+                          if (key === "←") {
+                            setAnswer((prev) => prev.slice(0, -1))
+                            return
+                          }
+                          setAnswer((prev) => `${prev}${key}`)
+                        }}
+                        disabled={isPaused || isGameOver}
+                        className="math-key-btn"
+                      >
+                        {key}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={submit}
+                    disabled={isPaused || isGameOver}
+                    className="math-submit-btn mt-4"
+                  >
+                    Submit
+                  </button>
                 </div>
               )}
             </div>
@@ -500,62 +574,72 @@ export default function Game() {
                 </div>
               )}
 
-              <div className="game-outline-text text-3xl mb-3">Quest is ready.</div>
+              {!isMathMode && (
+                <>
+                  <div className="game-outline-text text-3xl mb-3">Quest is ready.</div>
 
-              <div className="flex flex-col md:flex-row items-center gap-3">
-                <div className="game-outline-text text-2xl flex items-center gap-2">
-                  Enter the missing digit:
-                  <div className="game-input-shell rounded-2xl p-1.5">
-                    <input
-                      inputMode="numeric"
-                      value={answer}
-                      onChange={e => setAnswer(e.target.value.replace(/\D/g, ""))}
-                      disabled={isPaused || isGameOver}
-                      className="w-20 h-11 text-2xl text-center rounded-xl bg-transparent text-white font-black border-none shadow-sm outline-none disabled:opacity-50"
-                      autoFocus
-                    />
-                  </div>
-                </div>
+                  <div className="flex flex-col md:flex-row items-center gap-3">
+                    <div className="game-outline-text text-2xl flex items-center gap-2">
+                      Enter the missing digit:
+                      <div className="game-input-shell rounded-2xl p-1.5">
+                        <input
+                          inputMode="numeric"
+                          value={answer}
+                          onChange={e => setAnswer(e.target.value.replace(/\D/g, ""))}
+                          disabled={isPaused || isGameOver}
+                          className="w-20 h-11 text-2xl text-center rounded-xl bg-transparent text-white font-black border-none shadow-sm outline-none disabled:opacity-50"
+                          autoFocus
+                        />
+                      </div>
+                    </div>
 
-                <div className="flex gap-2 ml-auto items-center">
-                    <button onClick={submit} disabled={isPaused || isGameOver} className="game-cta-btn px-8 py-1.5 disabled:opacity-50 rounded-2xl text-4xl">Submit</button>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => {
-                        if (puzzleCount > 1) {
-                          setPuzzleCount(p => p - 1)
-                          setAttempts(3)
-                          setSeconds(60)
-                          loadPuzzle()
-                        }
-                      }}
-                      disabled={puzzleCount <= 1 || isPaused || isGameOver}
-                      className="game-cta-btn px-3 py-1.5 disabled:opacity-50 rounded-xl text-2xl transition-colors leading-none"
-                      title="Previous Puzzle"
-                    >
-                      ←
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (puzzleCount < 3) {
-                          setPuzzleCount(p => p + 1)
-                          setAttempts(3)
-                          setSeconds(60)
-                          loadPuzzle()
-                        }
-                      }}
-                      disabled={puzzleCount >= 3 || isPaused || isGameOver}
-                      className="game-cta-btn px-3 py-1.5 disabled:opacity-50 rounded-xl text-2xl transition-colors leading-none"
-                      title="Next Puzzle"
-                    >
-                      →
-                    </button>
+                    <div className="flex gap-2 ml-auto items-center">
+                      <button onClick={submit} disabled={isPaused || isGameOver} className="game-cta-btn px-8 py-1.5 disabled:opacity-50 rounded-2xl text-4xl">Submit</button>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => {
+                            if (puzzleCount > 1) {
+                              setPuzzleCount(p => p - 1)
+                              setAttempts(3)
+                              setSeconds(getRoundSeconds())
+                              loadPuzzle()
+                            }
+                          }}
+                          disabled={puzzleCount <= 1 || isPaused || isGameOver}
+                          className="game-cta-btn px-3 py-1.5 disabled:opacity-50 rounded-xl text-2xl transition-colors leading-none"
+                          title="Previous Puzzle"
+                        >
+                          ←
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (puzzleCount < 3) {
+                              setPuzzleCount(p => p + 1)
+                              setAttempts(3)
+                              setSeconds(getRoundSeconds())
+                              loadPuzzle()
+                            }
+                          }}
+                          disabled={puzzleCount >= 3 || isPaused || isGameOver}
+                          className="game-cta-btn px-3 py-1.5 disabled:opacity-50 rounded-xl text-2xl transition-colors leading-none"
+                          title="Next Puzzle"
+                        >
+                          →
+                        </button>
+                      </div>
+                    </div>
                   </div>
+                </>
+              )}
+
+              {isMathMode && (
+                <div className="mt-2 text-center text-cyan-100/80 text-xs md:text-sm font-bold uppercase tracking-[0.16em]">
+                  Math mode engaged • Timer accelerates with level
                 </div>
-              </div>
+              )}
 
               <div className="mt-3 flex justify-between items-center text-[10px] font-bold text-cyan-100/70 uppercase tracking-wider">
-                <span className="game-outline-text text-lg">Total Score: {score}</span>
+                <span className="game-outline-text text-lg">Total Score: <span className={`text-2xl font-black ${isMathMode ? 'text-purple-300' : 'text-orange-300'}`}>{score}</span></span>
                 {isGameOver && (
                   <button
                     onClick={resetGame}

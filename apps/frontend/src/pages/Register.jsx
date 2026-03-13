@@ -185,7 +185,7 @@ export default function Register() {
               letterSpacing: "0.05em"
             }}
           >
-            Tribe
+            Circle
           </span>
         </h1>
         <p className="text-cyan-400/70 text-xs font-bold uppercase tracking-widest mb-8 text-center">Create your account</p>

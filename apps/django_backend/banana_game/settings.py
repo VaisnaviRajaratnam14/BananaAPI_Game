@@ -4,6 +4,25 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def _load_env_file(env_path: Path):
+    if not env_path.exists():
+        return
+    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key:
+            os.environ.setdefault(key, value)
+
+
+# Load optional env files so local config works without exporting shell vars.
+_load_env_file(BASE_DIR / ".env")
+_load_env_file(BASE_DIR.parent.parent / ".env")
+
 SECRET_KEY = 'django-insecure-your-secret-key-here'
 
 DEBUG = True
@@ -109,3 +128,5 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Optional: set GOOGLE_CLIENT_ID in environment for strict token audience checks.
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+if GOOGLE_CLIENT_ID and "YOUR_GOOGLE_CLIENT_ID" in GOOGLE_CLIENT_ID:
+    GOOGLE_CLIENT_ID = ""

@@ -2,6 +2,7 @@ from rest_framework import status, generics, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.conf import settings
 from .models import Profile, Level
 from .serializers import (
@@ -14,6 +15,8 @@ import math
 import requests
 import random
 import re
+from google.auth.transport.requests import Request as GoogleRequest
+from google.oauth2 import id_token as google_id_token
 
 class CustomLoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -21,19 +24,107 @@ class CustomLoginView(TokenObtainPairView):
 class PuzzleView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    def _difficulty_multiplier(self, level):
+        mapping = {
+            1: 1.0,
+            2: 1.0,
+            3: 1.0,
+            4: 1.0,
+            5: 1.0,
+            6: 1.2,
+            7: 1.35,
+            8: 1.5,
+            9: 1.7,
+            10: 2.0,
+        }
+        return mapping.get(level, 2.0)
+
+    def _arithmetic_challenge(self):
+        a = random.randint(12, 65)
+        b = random.randint(3, 12)
+        c = random.randint(2, 10)
+        mode = random.randint(0, 2)
+
+        if mode == 0:
+            question_text = f"{a} + {b} * {c}"
+            correct_answer = a + (b * c)
+        elif mode == 1:
+            left = a * b
+            question_text = f"{left} - {c} + {b}"
+            correct_answer = left - c + b
+        else:
+            question_text = f"({a} - {b}) * {c}"
+            correct_answer = (a - b) * c
+
+        return question_text, str(correct_answer)
+
+    def _sequence_challenge(self):
+        sequence = []
+        if random.random() < 0.5:
+            start = random.randint(2, 12)
+            diff = random.randint(2, 9)
+            sequence = [start + (i * diff) for i in range(5)]
+        else:
+            start = random.randint(1, 5)
+            ratio = random.choice([2, 3])
+            sequence = [start * (ratio ** i) for i in range(5)]
+
+        missing_index = random.choice([2, 3])
+        missing_value = sequence[missing_index]
+        display = [str(n) for n in sequence]
+        display[missing_index] = "[?]"
+
+        return ", ".join(display), str(missing_value)
+
+    def _boss_algebra_challenge(self):
+        x = random.randint(2, 12)
+        a = random.randint(2, 9)
+        b = random.randint(3, 18)
+        c = a * x + b
+        question_text = f"Solve for x: {a}x + {b} = {c}"
+        return question_text, str(x)
+
     def get(self, request):
+        raw_level = request.query_params.get("level") or getattr(request.user.profile, "current_level", 1)
         try:
-            # Banana API endpoint
-            api_url = "https://marcconrad.com/uob/banana/api.php?out=json"
-            response = requests.get(api_url, timeout=15)
-            data = response.json()
-            
-            # Format response for frontend
+            level = int(raw_level)
+        except (TypeError, ValueError):
+            level = 1
+
+        try:
+            if level <= 5:
+                api_url = "https://marcconrad.com/uob/banana/api.php?out=json"
+                response = requests.get(api_url, timeout=15)
+                data = response.json()
+                answer = str(data.get("solution"))
+                return Response({
+                    "id": f"banana-{random.randint(1000, 9999)}",
+                    "question": data.get("question"),
+                    "solution": answer,
+                    "question_text": "Solve the banana puzzle",
+                    "correct_answer": answer,
+                    "difficulty_multiplier": self._difficulty_multiplier(level),
+                    "type": "external",
+                })
+
+            if level in (6, 7):
+                question_text, correct_answer = self._arithmetic_challenge()
+                puzzle_type = "math-arithmetic"
+            elif level in (8, 9):
+                question_text, correct_answer = self._sequence_challenge()
+                puzzle_type = "math-sequence"
+            else:
+                question_text, correct_answer = self._boss_algebra_challenge()
+                puzzle_type = "math-boss"
+
             return Response({
-                "id": f"banana-{random.randint(1000, 9999)}",
-                "question": data.get('question'),
-                "solution": data.get('solution'),
-                "type": "external"
+                "id": f"math-{level}-{random.randint(1000, 9999)}",
+                "question": question_text,
+                "solution": correct_answer,
+                "question_text": question_text,
+                "correct_answer": correct_answer,
+                "difficulty_multiplier": self._difficulty_multiplier(level),
+                "type": puzzle_type,
             })
         except Exception as e:
             import traceback
@@ -50,35 +141,36 @@ class RegisterView(generics.CreateAPIView):
 class GoogleAuthView(APIView):
     permission_classes = [permissions.AllowAny]
 
-    def _unique_username(self, email, given_name):
+    def _unique_username(self, user_model, email, given_name):
         base = (given_name or email.split('@')[0] or "player").strip().lower()
         base = re.sub(r'[^a-z0-9_]', '', base) or "player"
         base = base[:20]
 
+        username_field = getattr(user_model, "USERNAME_FIELD", "username")
         candidate = base
         i = 1
-        while User.objects.filter(username__iexact=candidate).exists():
+        while user_model.objects.filter(**{f"{username_field}__iexact": candidate}).exists():
             candidate = f"{base}{i}"
             i += 1
         return candidate
 
     def post(self, request):
-        id_token = request.data.get('id_token')
-        if not id_token:
+        token = request.data.get('id_token')
+        if not token:
             return Response({"error": "id_token is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            token_info = requests.get(
-                "https://oauth2.googleapis.com/tokeninfo",
-                params={"id_token": id_token},
-                timeout=10,
-            )
-            if token_info.status_code != 200:
-                return Response({"error": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
+        google_client_id = (getattr(settings, "GOOGLE_CLIENT_ID", "") or "").strip()
+        if not google_client_id:
+            return Response({"error": "Google login is not configured on server"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-            payload = token_info.json()
-            google_client_id = (getattr(settings, "GOOGLE_CLIENT_ID", "") or "").strip()
-            if google_client_id and payload.get("aud") != google_client_id:
+        try:
+            payload = google_id_token.verify_oauth2_token(
+                token,
+                GoogleRequest(),
+                google_client_id,
+            )
+
+            if payload.get("iss") not in {"accounts.google.com", "https://accounts.google.com"}:
                 return Response({"error": "Google token audience mismatch"}, status=status.HTTP_400_BAD_REQUEST)
 
             email = (payload.get("email") or "").strip().lower()
@@ -89,15 +181,20 @@ class GoogleAuthView(APIView):
             first_name = (payload.get("given_name") or "").strip()
             last_name = (payload.get("family_name") or "").strip()
 
-            user = User.objects.filter(email__iexact=email).first()
+            user_model = get_user_model()
+            user = user_model.objects.filter(email__iexact=email).first()
             if user is None:
-                username = self._unique_username(email, first_name)
-                user = User.objects.create(
-                    username=username,
-                    email=email,
-                    first_name=first_name,
-                    last_name=last_name,
-                )
+                username = self._unique_username(user_model, email, first_name)
+                create_data = {
+                    user_model.USERNAME_FIELD: username,
+                    "email": email,
+                }
+                if hasattr(user_model, "first_name"):
+                    create_data["first_name"] = first_name
+                if hasattr(user_model, "last_name"):
+                    create_data["last_name"] = last_name
+
+                user = user_model.objects.create(**create_data)
                 user.set_unusable_password()
                 user.save()
 
@@ -106,10 +203,10 @@ class GoogleAuthView(APIView):
                     user.profile.save()
             else:
                 updated = False
-                if first_name and not user.first_name:
+                if first_name and hasattr(user, "first_name") and not user.first_name:
                     user.first_name = first_name
                     updated = True
-                if last_name and not user.last_name:
+                if last_name and hasattr(user, "last_name") and not user.last_name:
                     user.last_name = last_name
                     updated = True
                 if updated:
@@ -121,8 +218,8 @@ class GoogleAuthView(APIView):
                 "refresh": str(refresh),
                 "user": UserSerializer(user).data,
             })
-        except requests.RequestException:
-            return Response({"error": "Failed to validate Google token"}, status=status.HTTP_502_BAD_GATEWAY)
+        except ValueError:
+            return Response({"error": "Invalid Google token"}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({"error": f"Google auth failed: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
 
