@@ -106,3 +106,6 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Optional: set GOOGLE_CLIENT_ID in environment for strict token audience checks.
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
