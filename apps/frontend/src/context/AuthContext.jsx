@@ -24,6 +24,11 @@ export function AuthProvider({ children }) {
     else localStorage.removeItem("user")
   }, [user])
 
+  const login = (newToken) => {
+    setToken(newToken)
+    setMfaVerified(true) // For now we bypass OTP
+  }
+
   const logout = () => {
     setToken("")
     setMfaVerified(false)
@@ -37,7 +42,7 @@ export function AuthProvider({ children }) {
     token, setToken, 
     mfaVerified, setMfaVerified,
     user, setUser,
-    logout
+    login, logout
   }), [token, mfaVerified, user])
   
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

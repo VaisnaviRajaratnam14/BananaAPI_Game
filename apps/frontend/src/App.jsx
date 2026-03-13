@@ -16,9 +16,10 @@ import BackgroundMusic from "./components/BackgroundMusic"
 import ThemeSwitcher from "./components/ThemeSwitcher"
 
 function Protected({ children }) {
-  const { token, mfaVerified, user } = useAuth()
+  const { token, user } = useAuth()
   if (!token) return <Navigate to="/login" replace />
-  if (!mfaVerified) return <Navigate to="/otp" replace />
+  // MFA (Otp) is not implemented in Django backend yet, so bypassing for now
+  // if (!mfaVerified) return <Navigate to="/otp" replace />
   return children
 }
 

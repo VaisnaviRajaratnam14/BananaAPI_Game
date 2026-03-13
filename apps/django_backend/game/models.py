@@ -5,6 +5,7 @@ from django.dispatch import receiver
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    nickname = models.CharField(max_length=100, blank=True)
     diamonds = models.IntegerField(default=500)
     energy = models.IntegerField(default=10)
     streak = models.IntegerField(default=0)
@@ -12,6 +13,7 @@ class Profile(models.Model):
     total_marks = models.IntegerField(default=0)
     rank = models.CharField(max_length=50, default="Novice")
     current_level = models.IntegerField(default=1)
+    avatar = models.TextField(blank=True, null=True) # Store base64 or URL
 
     def __str__(self):
         return f"{self.user.username}'s Profile"
@@ -21,6 +23,7 @@ class Level(models.Model):
     level_number = models.IntegerField()
     is_unlocked = models.BooleanField(default=False)
     stars_earned = models.FloatField(default=0) # 0, 1, 2, 2.5, 3
+    total_time_seconds = models.IntegerField(default=0)
 
     class Meta:
         unique_together = ('user', 'level_number')
