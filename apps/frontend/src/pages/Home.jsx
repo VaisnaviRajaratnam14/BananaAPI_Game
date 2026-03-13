@@ -31,41 +31,35 @@ export default function Home() {
     return levelData ? levelData.stars_earned : 0
   }
 
+  const canUnlock4 = getStars(1) >= 3 && getStars(2) >= 3 && getStars(3) >= 3
+
   const levels = [
-    { id: 1, pos: { x: 50, y: 1400 }, status: profile.current_level > 1 ? "completed" : profile.current_level === 1 ? "current" : "locked", stars: getStars(1) },
-    { id: 2, pos: { x: 30, y: 1200 }, status: profile.current_level > 2 ? "completed" : profile.current_level === 2 ? "current" : "locked", stars: getStars(2) },
-    { id: 3, pos: { x: 60, y: 1000 }, status: profile.current_level > 3 ? "completed" : profile.current_level === 3 ? "current" : "locked", stars: getStars(3) },
-    { 
-      id: 4, 
-      pos: { x: 40, y: 800 }, 
-      status: (getStars(1) >= 3 && getStars(2) >= 3 && getStars(3) >= 3) 
-        ? (profile.current_level > 4 ? "completed" : profile.current_level === 4 ? "current" : "locked")
-        : "locked", 
-      stars: getStars(4) 
-    },
-    { id: 5, pos: { x: 70, y: 600 }, status: profile.current_level > 5 ? "completed" : profile.current_level === 5 ? "current" : "locked", stars: getStars(5) },
+    { id: 1, x: 8, y: 74, status: profile.current_level > 1 ? "completed" : profile.current_level === 1 ? "current" : "locked", stars: getStars(1) },
+    { id: 2, x: 25, y: 62, status: profile.current_level > 2 ? "completed" : profile.current_level === 2 ? "current" : "locked", stars: getStars(2) },
+    { id: 3, x: 45, y: 70, status: profile.current_level > 3 ? "completed" : profile.current_level === 3 ? "current" : "locked", stars: getStars(3) },
+    { id: 4, x: 58, y: 49, status: canUnlock4 ? (profile.current_level > 4 ? "completed" : profile.current_level === 4 ? "current" : "locked") : "locked", stars: getStars(4) },
+    { id: 5, x: 74, y: 60, status: profile.current_level > 5 ? "completed" : profile.current_level === 5 ? "current" : "locked", stars: getStars(5) },
+    { id: 6, x: 90, y: 46, status: profile.current_level > 6 ? "completed" : profile.current_level === 6 ? "current" : "locked", stars: getStars(6) },
   ]
+
+  const maxLevelId = levels[levels.length - 1]?.id || 1
+  const heroLevelId = Math.min(profile.current_level || 1, maxLevelId)
+  const heroLevel = levels.find((l) => l.id === heroLevelId) || levels[0]
 
   return (
     <div className="min-h-screen flex flex-col bg-[#050d22] text-white font-sans overflow-hidden">
       {/* Top Navbar */}
-      <nav className="h-16 bg-[#0a1c3d]/95 border-b border-cyan-500/30 flex items-center px-4 md:px-8 gap-6 z-20">
-        <div className="flex items-center gap-2 mr-4">
+      <nav className="h-16 bg-[#050d22]/70 backdrop-blur-md border-b border-cyan-400/25 flex items-center px-4 md:px-8 gap-6 z-20">
+        <button
+          onClick={() => navigate("/home")}
+          className="flex items-center gap-2 mr-4 hover:scale-110 transition-transform"
+        >
           <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/30">
             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
-        </div>
-
-        <div className="hidden md:flex items-center gap-8 text-sm font-bold uppercase tracking-wider text-cyan-100/80">
-          <button className="text-cyan-200 border-b-2 border-orange-500 pb-1">Home</button>
-          <button className="hover:text-cyan-200 transition-colors">Learn</button>
-          <button className="hover:text-cyan-200 transition-colors">Daily Challenge</button>
-          <button onClick={() => navigate("/leaderboard")} className="hover:text-cyan-200 transition-colors">Leaderboard</button>
-          <button className="hover:text-cyan-200 transition-colors">Shop</button>
-          <button className="hover:text-cyan-200 transition-colors">Community</button>
-        </div>
+        </button>
 
         <div className="flex-1" />
 
@@ -107,64 +101,86 @@ export default function Home() {
       </nav>
 
       {/* Level Map Content */}
-      <main className="flex-1 relative overflow-y-auto bg-gradient-to-b from-[#07122d] via-[#0a2f5e] to-[#0891b2]">
-        <div className="absolute inset-0 flex flex-col items-center py-20 min-h-[1500px]">
-          <svg className="absolute w-full h-full pointer-events-none" viewBox="0 0 400 1500" preserveAspectRatio="none">
-            <path
-              d="M 320 1400 Q 240 1300 120 1200 T 80 1000 T 160 800 T 140 600 T 200 400 T 100 200"
-              fill="none"
-              stroke="#fb923c"
-              strokeWidth="40"
-              strokeLinecap="round"
-              className="opacity-45"
+      <main className="flex-1 relative overflow-hidden min-h-[620px] bg-[radial-gradient(circle_at_50%_40%,#2c64d2_0%,#1b2d8d_33%,#1a1067_62%,#120644_100%)]">
+        <div className="absolute inset-0">
+          {[...Array(45)].map((_, i) => (
+            <span
+              key={i}
+              className="absolute rounded-full bg-white/80"
+              style={{
+                width: `${(i % 3) + 2}px`,
+                height: `${(i % 3) + 2}px`,
+                left: `${(i * 17) % 100}%`,
+                top: `${(i * 29) % 100}%`,
+                opacity: 0.35 + ((i % 5) * 0.12),
+              }}
             />
-          </svg>
+          ))}
+        </div>
 
-          <div className="relative w-full max-w-md h-full flex flex-col gap-32">
-            {[...levels].reverse().map((level) => (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_35%_75%,rgba(34,211,238,0.3),transparent_45%),radial-gradient(circle_at_82%_22%,rgba(168,85,247,0.35),transparent_40%)]" />
+
+        <div className="relative z-10 w-full h-[calc(100vh-64px)] min-h-[620px] px-2 md:px-6 py-8">
+          <div className="mx-auto w-full max-w-7xl h-full rounded-[24px] border border-cyan-300/20 bg-white/5 backdrop-blur-[1px] overflow-hidden relative">
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <path
+                d="M 8 74 C 14 67, 18 64, 25 62 C 34 60, 38 72, 45 70 C 51 68, 54 51, 58 49 C 66 44, 69 62, 74 60 C 82 58, 86 48, 90 46"
+                fill="none"
+                stroke="rgba(167,139,250,0.65)"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M 8 74 C 14 67, 18 64, 25 62 C 34 60, 38 72, 45 70 C 51 68, 54 51, 58 49 C 66 44, 69 62, 74 60 C 82 58, 86 48, 90 46"
+                fill="none"
+                stroke="rgba(255,255,255,0.75)"
+                strokeWidth="0.35"
+                strokeDasharray="0.3 1.1"
+                strokeLinecap="round"
+              />
+            </svg>
+
+            <div
+              className="absolute z-20 transition-all duration-700 ease-out -translate-x-1/2 -translate-y-[82%]"
+              style={{ left: `${heroLevel.x}%`, top: `${heroLevel.y}%` }}
+            >
+              <div className="absolute left-1/2 top-[84%] -translate-x-1/2 w-[104px] h-[30px] rounded-[999px] bg-[linear-gradient(180deg,#696a87_0%,#2d2d48_100%)] border border-cyan-200/35 shadow-[inset_0_2px_0_rgba(255,255,255,0.22),0_8px_16px_rgba(0,0,0,0.45)]" />
+              <div className="relative text-[76px] md:text-[106px] drop-shadow-[0_0_22px_rgba(255,255,255,0.45)] select-none animate-pulse">🤖</div>
+            </div>
+
+            {levels.map((level) => (
               <div
                 key={level.id}
-                className="relative flex justify-center"
-                style={{ left: `${level.pos.x - 50}%` }}
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+                style={{ left: `${level.x}%`, top: `${level.y}%` }}
               >
+                <div className="absolute left-1/2 -bottom-7 -translate-x-1/2 w-[88px] h-[30px] rounded-[999px] bg-[linear-gradient(180deg,#5a5a78_0%,#30304e_100%)] border border-cyan-300/20 shadow-[inset_0_2px_0_rgba(255,255,255,0.25),0_8px_16px_rgba(0,0,0,0.45)]" />
+
                 <button
                   onClick={() => level.status !== "locked" && navigate("/game", { state: { level: level.id } })}
-                  className={`
-                    w-20 h-20 rounded-full border-b-8 shadow-xl flex items-center justify-center text-3xl font-black relative transition-all active:scale-95
-                    ${level.status === "completed" ? "bg-cyan-400 border-[#0a2f5e] text-[#07122d]" : ""}
-                    ${level.status === "current" ? "bg-orange-400 border-orange-600 text-[#07122d] animate-bounce" : ""}
-                    ${level.status === "locked" ? "bg-slate-200 border-slate-300 text-slate-400 opacity-80 cursor-not-allowed" : ""}
-                  `}
+                  className={`relative z-10 w-[58px] h-[58px] rounded-full flex items-center justify-center text-[30px] font-black transition-transform duration-200 active:scale-95 ${
+                    level.status === "locked"
+                      ? "bg-[#7b4dbb] text-white/75 border-4 border-white/35 cursor-not-allowed"
+                      : "bg-[linear-gradient(180deg,#ffba33_0%,#ff8f1f_100%)] text-white border-4 border-[#ffe2a8] shadow-[0_0_18px_rgba(255,165,0,0.65)] hover:scale-105"
+                  }`}
                 >
                   {level.id}
-                  
-                  {level.status !== "locked" && (
-                    <div className="absolute -top-10 flex gap-0.5 z-30">
-                      {[1, 2, 3].map((star) => (
-                        <svg
-                          key={star}
-                          className={`w-8 h-8 transition-all duration-500 ${
-                            star <= level.stars ? "text-orange-300 scale-125 drop-shadow-[0_3px_3px_rgba(0,0,0,0.5)]" : "text-[#07122d]/20"
-                          } ${star === 2 ? "-translate-y-1.5" : ""}`}
-                          fill="currentColor"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                    </div>
-                  )}
-
-                  {(level.id === 2 || level.id === 5 || level.id === 8) && (
-                    <div className="absolute -right-12 top-0 transform -rotate-12">
-                      <div className={`w-12 h-12 rounded-xl border-b-4 flex items-center justify-center ${level.id === 5 ? "bg-cyan-400 border-cyan-600" : "bg-orange-400 border-orange-600"}`}>
-                        <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                      </div>
-                    </div>
-                  )}
                 </button>
+
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center gap-[2px]">
+                  {[1, 2, 3].map((star) => (
+                    <span
+                      key={star}
+                      className={`text-[18px] leading-none ${star === 2 ? "-translate-y-[4px]" : ""} ${
+                        star <= Math.round(level.stars)
+                          ? "text-orange-300 drop-shadow-[0_0_6px_rgba(253,186,116,0.9)]"
+                          : "text-slate-300/50"
+                      }`}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
               </div>
             ))}
           </div>

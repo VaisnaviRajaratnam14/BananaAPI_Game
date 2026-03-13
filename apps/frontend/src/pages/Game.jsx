@@ -1,9 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
+import lottie from "lottie-web"
 import { withAuth } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
 import bananaImg from "../assets/banana.svg"
 import bgImage from "../assets/backgroundg.webp"
+import confettiBlastAnim from "../assets/Confetti Partyyy!!.json"
+import ElectroBorder from "../components/ElectroBorder"
 
 export default function Game() {
   const navigate = useNavigate()
@@ -18,6 +21,7 @@ export default function Game() {
   const [status, setStatus] = useState("")
   const [musicEnabled, setMusicEnabled] = useState(localStorage.getItem("musicEnabled") !== "false")
   const [musicVolume, setMusicVolume] = useState(parseFloat(localStorage.getItem("musicVolume") || "0.2"))
+  const [showConfetti, setShowConfetti] = useState(false)
 
   const toggleMusic = () => {
     const newState = !musicEnabled
@@ -41,6 +45,7 @@ export default function Game() {
   const [hasGift, setHasGift] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const levelStartedAtRef = useRef(Date.now())
+  const confettiHostRef = useRef(null)
 
   const currentEmoji = attempts === 3 ? "🍌" : "😊"
 
@@ -63,6 +68,28 @@ export default function Game() {
       handleTimeout()
     }
   }, [seconds, isPaused, isGameOver, puzzle])
+
+  useEffect(() => {
+    if (!status.includes("Not Correct")) return
+    const id = setTimeout(() => setStatus(""), 1800)
+    return () => clearTimeout(id)
+  }, [status])
+
+  useEffect(() => {
+    if (!showConfetti || !status.includes("Correct") || !confettiHostRef.current) return
+
+    const anim = lottie.loadAnimation({
+      container: confettiHostRef.current,
+      renderer: "svg",
+      loop: false,
+      autoplay: true,
+      animationData: confettiBlastAnim,
+    })
+
+    return () => {
+      anim.destroy()
+    }
+  }, [showConfetti, status])
 
   function handleTimeout() {
     const nextAttempts = attempts - 1
@@ -99,6 +126,8 @@ export default function Game() {
     setScore(0)
     setStars(0)
     setHasGift(false)
+    setStatus("")
+    setShowConfetti(false)
   }
 
   async function loadPuzzle() {
@@ -129,6 +158,8 @@ export default function Game() {
 
     if (correct) {
       setStatus("Correct")
+      setShowConfetti(true)
+      setTimeout(() => setShowConfetti(false), 900)
 
       // Attempt-based scoring
       let earned = 0
@@ -330,28 +361,40 @@ export default function Game() {
       </nav>
 
       <div className="flex-1 flex items-center justify-center px-4 py-8">
-        <div className="border-beam rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl">
-          <div className="bg-white p-4 md:p-6 min-h-[400px] flex flex-col">
+        <ElectroBorder
+          className="w-full max-w-5xl"
+          borderColor="#00f6ff"
+          borderWidth={2}
+          distortion={1}
+          animationSpeed={0.9}
+          radius="0.9rem"
+          glow
+          aura
+          effects
+          glowBlur={22}
+        >
+          <div className="game-inner-bg rounded-xl overflow-hidden shadow-2xl p-5 md:p-8 min-h-[560px] flex flex-col">
+            <h1 className="game-champ-title text-center mb-4">Brain Adventure</h1>
 
             {/* Header section matching the image */}
             <div className="mb-4">
               <div className="flex justify-center items-start">
-                <div className="bg-gradient-to-r from-[#0a2f5e] via-cyan-500 to-orange-500 text-white text-3xl md:text-5xl font-bold px-6 py-2 rounded-2xl shadow-lg min-w-[140px] text-center">
+                <div className="game-timer-pill text-white text-4xl md:text-6xl px-8 py-1.5 rounded-3xl min-w-[170px] text-center">
                   {formatTime(seconds)}
                 </div>
               </div>
             </div>
 
             {/* Puzzle Progress and Attempts */}
-            <div className="flex justify-between items-center mb-4 text-sm font-bold text-slate-500 uppercase tracking-widest">
-              <div>Puzzle {puzzleCount} / 3</div>
+            <div className="flex justify-between items-center mb-4 text-sm md:text-3xl">
+              <div className="game-outline-text">Puzzle {puzzleCount} / 3</div>
               <div className="flex gap-2 items-center">
-                <span>Attempts:</span>
+                <span className="game-outline-text">Attempts:</span>
                 <div className="flex gap-1">
                   {[1, 2, 3].map(i => (
                     <div
                       key={i}
-                      className={`w-3 h-3 rounded-full ${i <= attempts ? "bg-red-500" : "bg-slate-200"}`}
+                      className={`w-4 h-4 rounded-full border border-red-950/40 ${i <= attempts ? "bg-red-500 shadow-[0_0_8px_rgba(248,113,113,0.9)]" : "bg-slate-300/70"}`}
                     />
                   ))}
                 </div>
@@ -360,6 +403,28 @@ export default function Game() {
 
             {/* The Grid area */}
             <div className="flex-1 flex items-center justify-center my-4 relative">
+              {isGameOver && (
+                <div className="absolute inset-0 game-over-neon z-20 flex flex-col items-center justify-center rounded-2xl animate-in fade-in duration-300">
+                  <div className="flex items-center gap-4 md:gap-8 mb-4">
+                    <span className="game-over-neon-symbol">◁</span>
+                    <div className="game-over-neon-title text-center">
+                      <div className="game-over-neon-green text-5xl md:text-7xl">Game</div>
+                      <div className="game-over-neon-pink text-5xl md:text-7xl">Over</div>
+                    </div>
+                    <span className="game-over-neon-symbol">▷</span>
+                  </div>
+
+                  <div className="game-over-neon-symbol mb-6">+ × □ ○</div>
+
+                  <button
+                    onClick={() => { resetGame(); loadPuzzle() }}
+                    className="game-cta-btn px-8 py-2 rounded-2xl text-2xl"
+                  >
+                    Play Again
+                  </button>
+                </div>
+              )}
+
               {isPaused && (
                 <div className="absolute inset-0 bg-[#07122d]/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl animate-in fade-in duration-300">
                   <div className="text-cyan-200 text-4xl font-black italic uppercase tracking-tighter mb-4">GAME PAUSED</div>
@@ -383,7 +448,7 @@ export default function Game() {
                 </div>
               )}
               {puzzle?.type === "external" && (
-                <div className="w-full max-w-lg bg-white p-2 rounded-lg shadow-sm border border-gray-100 flex items-center justify-center min-h-[300px]">
+                <div className="electro-border puzzle-stage w-full max-w-4xl p-3 shadow-sm flex items-center justify-center min-h-[390px]">
                   <img
                     src={puzzle.question}
                     alt="Banana Puzzle"
@@ -419,28 +484,41 @@ export default function Game() {
               )}
 
               {status && (
-                <div className={`mb-2 text-xl font-bold italic ${status.includes("Correct") || status === "Level Complete!" ? "text-green-600" : "text-red-500"}`}>
-                  {status}!
+                <div className="relative min-h-[58px]">
+                  {showConfetti && status.includes("Correct") && (
+                    <div className="confetti-blast">
+                      <span className="blast-core" />
+                      <div className="lottie-bomb-wrap">
+                        <div ref={confettiHostRef} className="w-full h-full" />
+                      </div>
+                    </div>
+                  )}
+
+                  <div className={`mb-2 text-2xl font-black italic ${status.includes("Not Correct") ? "wrong-answer-fx" : ""} ${status.includes("Correct") ? "correct-answer-fx" : ""} ${status.includes("Correct") || status === "Level Complete!" ? "text-green-400" : "text-red-400"}`}>
+                    {status.includes("Not Correct") ? "Wrong Answer 🙈" : status}
+                  </div>
                 </div>
               )}
 
-              <div className="text-lg font-bold text-black mb-3 italic">Quest is ready.</div>
+              <div className="game-outline-text text-3xl mb-3">Quest is ready.</div>
 
               <div className="flex flex-col md:flex-row items-center gap-3">
-                <div className="text-base font-bold text-black flex items-center gap-2">
+                <div className="game-outline-text text-2xl flex items-center gap-2">
                   Enter the missing digit:
-                  <input
-                    inputMode="numeric"
-                    value={answer}
-                    onChange={e => setAnswer(e.target.value.replace(/\D/g, ""))}
-                    disabled={isPaused}
-                    className="w-16 h-10 text-xl text-center rounded-lg bg-gradient-to-r from-orange-400 to-red-400 text-white font-bold border-none shadow-sm focus:ring-4 ring-orange-200 outline-none disabled:opacity-50"
-                    autoFocus
-                  />
+                  <div className="game-input-shell rounded-2xl p-1.5">
+                    <input
+                      inputMode="numeric"
+                      value={answer}
+                      onChange={e => setAnswer(e.target.value.replace(/\D/g, ""))}
+                      disabled={isPaused || isGameOver}
+                      className="w-20 h-11 text-2xl text-center rounded-xl bg-transparent text-white font-black border-none shadow-sm outline-none disabled:opacity-50"
+                      autoFocus
+                    />
+                  </div>
                 </div>
 
                 <div className="flex gap-2 ml-auto items-center">
-                  <button onClick={submit} disabled={isPaused} className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-600 disabled:opacity-50 text-[#07122d] font-bold rounded-lg text-xs shadow-md transition-all active:scale-95">Submit</button>
+                    <button onClick={submit} disabled={isPaused || isGameOver} className="game-cta-btn px-8 py-1.5 disabled:opacity-50 rounded-2xl text-4xl">Submit</button>
                   <div className="flex gap-1">
                     <button
                       onClick={() => {
@@ -451,8 +529,8 @@ export default function Game() {
                           loadPuzzle()
                         }
                       }}
-                      disabled={puzzleCount <= 1 || isPaused}
-                      className="px-3 py-1.5 bg-cyan-50 hover:bg-cyan-100 disabled:opacity-50 text-[#0a2f5e] font-bold rounded-lg text-lg transition-colors leading-none"
+                      disabled={puzzleCount <= 1 || isPaused || isGameOver}
+                      className="game-cta-btn px-3 py-1.5 disabled:opacity-50 rounded-xl text-2xl transition-colors leading-none"
                       title="Previous Puzzle"
                     >
                       ←
@@ -466,8 +544,8 @@ export default function Game() {
                           loadPuzzle()
                         }
                       }}
-                      disabled={puzzleCount >= 3 || isPaused}
-                      className="px-3 py-1.5 bg-cyan-50 hover:bg-cyan-100 disabled:opacity-50 text-[#0a2f5e] font-bold rounded-lg text-lg transition-colors leading-none"
+                      disabled={puzzleCount >= 3 || isPaused || isGameOver}
+                      className="game-cta-btn px-3 py-1.5 disabled:opacity-50 rounded-xl text-2xl transition-colors leading-none"
                       title="Next Puzzle"
                     >
                       →
@@ -476,12 +554,12 @@ export default function Game() {
                 </div>
               </div>
 
-              <div className="mt-3 flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                <span>Total Score: {score}</span>
+              <div className="mt-3 flex justify-between items-center text-[10px] font-bold text-cyan-100/70 uppercase tracking-wider">
+                <span className="game-outline-text text-lg">Total Score: {score}</span>
                 {isGameOver && (
                   <button
                     onClick={resetGame}
-                    className="text-cyan-700 hover:underline font-black"
+                    className="game-outline-text text-lg hover:underline"
                   >
                     Play Again
                   </button>
@@ -490,7 +568,7 @@ export default function Game() {
             </div>
 
           </div>
-        </div>
+        </ElectroBorder>
       </div>
     </div>
   )

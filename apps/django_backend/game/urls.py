@@ -2,13 +2,14 @@ from django.urls import path
 from .views import (
     RegisterView, UserStatsView, UpdateProfileView, 
     CollectRewardsView, LeaderboardView, ChangePasswordView,
-    PuzzleView, CustomLoginView
+    PuzzleView, CustomLoginView, GoogleAuthView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
 
 urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/login/', CustomLoginView.as_view(), name='token_obtain_pair'),
+    path('auth/google/', GoogleAuthView.as_view(), name='google_auth'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/password/', ChangePasswordView.as_view(), name='change_password'),
     path('user/stats/', UserStatsView.as_view(), name='user_stats'),

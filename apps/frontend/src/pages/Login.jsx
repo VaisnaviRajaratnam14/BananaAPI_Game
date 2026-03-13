@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { api, withAuth } from "../utils/api"
@@ -8,9 +8,84 @@ export default function Login() {
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState("")
   const { login, setUser } = useAuth()
   const navigate = useNavigate()
+  const googleBtnRef = useRef(null)
+
+  useEffect(() => {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+    if (!clientId) return
+
+    const initializeGoogle = () => {
+      if (!window.google?.accounts?.id || !googleBtnRef.current) return
+
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCredential,
+      })
+
+      googleBtnRef.current.innerHTML = ""
+      window.google.accounts.id.renderButton(googleBtnRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        shape: "pill",
+        text: "continue_with",
+        width: 320,
+      })
+    }
+
+    if (window.google?.accounts?.id) {
+      initializeGoogle()
+      return
+    }
+
+    const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
+    if (existing) {
+      existing.addEventListener("load", initializeGoogle)
+      return () => existing.removeEventListener("load", initializeGoogle)
+    }
+
+    const script = document.createElement("script")
+    script.src = "https://accounts.google.com/gsi/client"
+    script.async = true
+    script.defer = true
+    script.onload = initializeGoogle
+    document.body.appendChild(script)
+
+    return () => {
+      script.onload = null
+    }
+  }, [])
+
+  async function handleGoogleCredential(response) {
+    if (!response?.credential) return
+
+    setGoogleLoading(true)
+    setError("")
+    try {
+      const res = await api.post("auth/google/", { id_token: response.credential })
+      const { access, user: googleUser } = res.data
+
+      login(access)
+      if (googleUser) {
+        setUser(googleUser)
+      } else {
+        const authApi = withAuth(access)
+        const userRes = await authApi.get("user/stats/")
+        setUser(userRes.data)
+      }
+
+      navigate("/intro")
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.response?.data?.detail || "Google login failed"
+      setError(String(msg).toUpperCase())
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -81,8 +156,31 @@ export default function Login() {
         {/* Cyan glow accent top */}
         <div className="absolute -top-px left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent rounded-full" />
 
-        <h1 className="text-4xl font-black text-white italic uppercase tracking-tighter mb-2 drop-shadow-lg">
-          Player Login
+        <h1 className="mb-2 leading-tight text-center">
+          <span
+            className="block text-5xl uppercase"
+            style={{
+              fontFamily: "'Luckiest Guy', cursive",
+              color: "#4aeadc",
+              WebkitTextStroke: "2px #0a3d38",
+              textShadow: "3px 3px 0 #0a3d38, 6px 6px 0 #041f1c, 0 0 20px rgba(74,234,220,0.4)",
+              letterSpacing: "0.05em"
+            }}
+          >
+            Player
+          </span>
+          <span
+            className="block text-5xl uppercase -mt-1"
+            style={{
+              fontFamily: "'Luckiest Guy', cursive",
+              color: "#ffa733",
+              WebkitTextStroke: "2px #7d3a00",
+              textShadow: "3px 3px 0 #7d3a00, 6px 6px 0 #3d1c00, 0 0 20px rgba(255,167,51,0.4)",
+              letterSpacing: "0.05em"
+            }}
+          >
+            Login
+          </span>
         </h1>
         <p className="text-cyan-400/70 text-xs font-bold uppercase tracking-widest mb-8">Welcome back, explorer</p>
 
@@ -139,6 +237,30 @@ export default function Login() {
           >
             {loading ? "AUTHENTICATING..." : "Start Adventure"}
           </button>
+
+          <div className="pt-1">
+            <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest text-white/40 mb-3">
+              <div className="h-px bg-cyan-500/20 flex-1" />
+              or
+              <div className="h-px bg-cyan-500/20 flex-1" />
+            </div>
+
+            {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
+              <div className="flex justify-center">
+                <div ref={googleBtnRef} />
+              </div>
+            ) : (
+              <div className="text-[10px] text-cyan-400/60 font-bold uppercase tracking-wider text-center">
+                Set VITE_GOOGLE_CLIENT_ID to enable Google login
+              </div>
+            )}
+
+            {googleLoading && (
+              <div className="text-[10px] text-cyan-200/80 font-bold uppercase tracking-wider text-center mt-2">
+                Verifying Google account...
+              </div>
+            )}
+          </div>
         </form>
 
         <div className="mt-8 pt-6 border-t border-cyan-500/20 flex flex-col gap-3">
