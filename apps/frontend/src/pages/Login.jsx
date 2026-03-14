@@ -1,15 +1,27 @@
 import React, { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
+import { jwtDecode } from "jwt-decode"
 import { useAuth } from "../context/AuthContext"
 import { api, withAuth } from "../utils/api"
 import GoogleLoginButton from "../components/GoogleLoginButton"
 import bgImage from "../assets/background.avif"
 
+function isClientIdConfigured(value) {
+  if (!value) return false
+  const normalized = value.toLowerCase()
+  if (normalized.includes("your_google_client_id")) return false
+  if (normalized.includes("your_google_web_client_id")) return false
+  if (normalized.includes("your-id-here")) return false
+  return true
+}
+
 export default function Login() {
   const [identifier, setIdentifier] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState("")
+  const [googleUserPreview, setGoogleUserPreview] = useState(null)
   const { login, setUser } = useAuth()
   const navigate = useNavigate()
   const rawGoogleClientId = (
@@ -17,14 +29,27 @@ export default function Login() {
     import.meta.env.GOOGLE_CLIENT_ID ||
     ""
   ).trim()
-  const googleConfigured = !!rawGoogleClientId && !rawGoogleClientId.includes("YOUR_GOOGLE_CLIENT_ID")
+  const googleConfigured = isClientIdConfigured(rawGoogleClientId)
 
-  async function handleGoogleCredential(response) {
-    if (!response?.credential) return
+  async function handleCallbackResponse(credentialResponse) {
+    if (!credentialResponse?.credential) return
 
     setError("")
+    setGoogleLoading(true)
     try {
-      const { access, user: googleUser } = response
+      const decoded = jwtDecode(credentialResponse.credential)
+      const previewUser = {
+        name: decoded?.name || "Player",
+        email: decoded?.email || "",
+        picture: decoded?.picture || "",
+      }
+      setGoogleUserPreview(previewUser)
+
+      const response = await api.post("auth/google/", {
+        id_token: credentialResponse.credential,
+      })
+
+      const { access, user: googleUser } = response.data
 
       login(access)
       if (googleUser) {
@@ -35,10 +60,13 @@ export default function Login() {
         setUser(userRes.data)
       }
 
-      navigate("/intro")
+      window.setTimeout(() => navigate("/intro"), 800)
     } catch (err) {
       const msg = err?.response?.data?.error || err?.response?.data?.detail || "Google login failed"
       setError(String(msg).toUpperCase())
+      setGoogleUserPreview(null)
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -202,9 +230,35 @@ export default function Login() {
 
             <GoogleLoginButton
               disabled={!googleConfigured}
-              onLoginSuccess={handleGoogleCredential}
+              onCredentialResponse={handleCallbackResponse}
               onLoginError={(msg) => setError(String(msg).toUpperCase())}
             />
+
+            {googleLoading && (
+              <div className="mt-3 text-xs text-cyan-200/80 font-bold uppercase tracking-wider text-center">
+                Verifying Google account...
+              </div>
+            )}
+
+            {googleUserPreview && (
+              <div className="mt-3 flex items-center justify-center gap-3 rounded-xl border border-cyan-400/40 bg-cyan-900/20 px-3 py-2">
+                {googleUserPreview.picture && (
+                  <img
+                    src={googleUserPreview.picture}
+                    alt={googleUserPreview.name}
+                    className="h-8 w-8 rounded-full border border-cyan-300/60"
+                  />
+                )}
+                <div className="text-left">
+                  <p className="text-cyan-200 text-xs font-bold uppercase tracking-wide">
+                    Welcome, {googleUserPreview.name}
+                  </p>
+                  {googleUserPreview.email && (
+                    <p className="text-cyan-300/70 text-[10px] tracking-wide">{googleUserPreview.email}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </form>
 
