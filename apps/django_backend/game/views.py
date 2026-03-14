@@ -12,6 +12,7 @@ from .serializers import (
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 import math
+import os
 import requests
 import random
 import re
@@ -141,6 +142,31 @@ class RegisterView(generics.CreateAPIView):
 class GoogleAuthView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    def _resolve_google_client_id(self):
+        configured = (getattr(settings, "GOOGLE_CLIENT_ID", "") or "").strip()
+        if configured:
+            return configured
+
+        env_value = (os.getenv("GOOGLE_CLIENT_ID", "") or "").strip()
+        if env_value:
+            return env_value
+
+        # Dev fallback: read root .env directly when process env is stale.
+        try:
+            env_path = settings.BASE_DIR.parent.parent / ".env"
+            if env_path.exists():
+                for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+                    line = raw_line.strip()
+                    if not line or line.startswith("#") or "=" not in line:
+                        continue
+                    key, value = line.split("=", 1)
+                    if key.strip() == "GOOGLE_CLIENT_ID":
+                        return value.strip().strip('"').strip("'")
+        except Exception:
+            return ""
+
+        return ""
+
     def _unique_username(self, user_model, email, given_name):
         base = (given_name or email.split('@')[0] or "player").strip().lower()
         base = re.sub(r'[^a-z0-9_]', '', base) or "player"
@@ -159,7 +185,7 @@ class GoogleAuthView(APIView):
         if not token:
             return Response({"error": "id_token is required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        google_client_id = (getattr(settings, "GOOGLE_CLIENT_ID", "") or "").strip()
+        google_client_id = self._resolve_google_client_id()
         if not google_client_id:
             return Response({"error": "Google login is not configured on server"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -170,8 +196,12 @@ class GoogleAuthView(APIView):
                 google_client_id,
             )
 
-            if payload.get("iss") not in {"accounts.google.com", "https://accounts.google.com"}:
+            token_audience = (payload.get("aud") or "").strip()
+            if token_audience != google_client_id:
                 return Response({"error": "Google token audience mismatch"}, status=status.HTTP_400_BAD_REQUEST)
+
+            if payload.get("iss") not in {"accounts.google.com", "https://accounts.google.com"}:
+                return Response({"error": "Google token issuer mismatch"}, status=status.HTTP_400_BAD_REQUEST)
 
             email = (payload.get("email") or "").strip().lower()
             email_verified = str(payload.get("email_verified", "")).lower() == "true"

@@ -16,7 +16,9 @@ def _load_env_file(env_path: Path):
         key = key.strip()
         value = value.strip().strip('"').strip("'")
         if key:
-            os.environ.setdefault(key, value)
+            current = os.environ.get(key)
+            if current is None or current == "":
+                os.environ[key] = value
 
 
 # Load optional env files so local config works without exporting shell vars.

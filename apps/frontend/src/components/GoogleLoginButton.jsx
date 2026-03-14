@@ -1,40 +1,121 @@
-import React, { useState } from "react"
-import { GoogleLogin } from "@react-oauth/google"
-import { api } from "../utils/api"
+import React, { useEffect, useRef } from "react"
+
+const googleClientId = (
+  import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+  import.meta.env.GOOGLE_CLIENT_ID ||
+  ""
+).trim()
+
+function isClientIdConfigured(value) {
+  if (!value) return false
+  const normalized = value.toLowerCase()
+  if (normalized.includes("your_google_client_id")) return false
+  if (normalized.includes("your_google_web_client_id")) return false
+  if (normalized.includes("your-id-here")) return false
+  return true
+}
 
 export default function GoogleLoginButton({
   disabled = false,
-  onLoginSuccess,
+  onCredentialResponse,
   onLoginError,
 }) {
-  const [loading, setLoading] = useState(false)
+  const buttonRef = useRef(null)
+  const credentialHandlerRef = useRef(onCredentialResponse)
+  const errorHandlerRef = useRef(onLoginError)
 
-  async function handleSuccess(credentialResponse) {
-    if (!credentialResponse?.credential) {
-      onLoginError?.("Google did not return a credential")
+  useEffect(() => {
+    credentialHandlerRef.current = onCredentialResponse
+    errorHandlerRef.current = onLoginError
+  }, [onCredentialResponse, onLoginError])
+
+  useEffect(() => {
+    if (disabled) return
+    if (!isClientIdConfigured(googleClientId)) {
+      onLoginError?.("Google client ID is missing")
       return
     }
 
-    setLoading(true)
-    try {
-      const res = await api.post("auth/google/", {
-        id_token: credentialResponse.credential,
-      })
-      onLoginSuccess?.(res.data)
-    } catch (err) {
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.detail ||
-        "Google login failed"
-      onLoginError?.(String(msg))
-    } finally {
-      setLoading(false)
-    }
-  }
+    let cancelled = false
+    let poll = null
 
-  function handleError() {
-    onLoginError?.("Google sign-in popup failed or was closed")
-  }
+    const initGoogle = () => {
+      if (cancelled) return
+      if (!window.google?.accounts?.id || !buttonRef.current) return
+
+      if (!window.__bananaGoogleCredentialCallback) {
+        window.__bananaGoogleCredentialCallback = (credentialResponse) => {
+          if (!credentialResponse?.credential) {
+            errorHandlerRef.current?.("Google did not return a credential")
+            return
+          }
+          credentialHandlerRef.current?.(credentialResponse)
+        }
+      }
+
+      if (!window.__bananaGoogleInitialized) {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: window.__bananaGoogleCredentialCallback,
+          auto_select: false,
+        })
+        window.__bananaGoogleInitialized = true
+      }
+
+      buttonRef.current.innerHTML = ""
+      window.google.accounts.id.renderButton(buttonRef.current, {
+        type: "standard",
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+        logo_alignment: "left",
+        width: "320",
+      })
+
+      if (poll) {
+        window.clearInterval(poll)
+        poll = null
+      }
+    }
+
+    if (window.google?.accounts?.id) {
+      initGoogle()
+    } else {
+      poll = window.setInterval(() => {
+        if (!window.google?.accounts?.id) {
+          return
+        }
+        initGoogle()
+      }, 200)
+
+      const timeout = window.setTimeout(() => {
+        if (!window.google?.accounts?.id) {
+          if (poll) {
+            window.clearInterval(poll)
+            poll = null
+          }
+          errorHandlerRef.current?.("Google script did not load")
+        }
+      }, 8000)
+
+      return () => {
+        cancelled = true
+        if (poll) {
+          window.clearInterval(poll)
+          poll = null
+        }
+        window.clearTimeout(timeout)
+      }
+    }
+
+    return () => {
+      cancelled = true
+      if (poll) {
+        window.clearInterval(poll)
+      }
+    }
+  }, [disabled])
 
   if (disabled) {
     return (
@@ -50,22 +131,6 @@ export default function GoogleLoginButton({
   }
 
   return (
-    <div className="flex justify-center">
-      <GoogleLogin
-        onSuccess={handleSuccess}
-        onError={handleError}
-        theme="outline"
-        size="large"
-        shape="pill"
-        text="continue_with"
-        width="320"
-        useOneTap={false}
-      />
-      {loading && (
-        <div className="absolute mt-14 text-xs text-cyan-200/80 font-bold uppercase tracking-wider text-center">
-          Verifying Google account...
-        </div>
-      )}
-    </div>
+    <div className="flex justify-center" ref={buttonRef} />
   )
 }
