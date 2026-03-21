@@ -1,12 +1,24 @@
-import React, { useEffect, useRef, useState } from "react"
+import React, { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { api } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
+import { useLanguage } from "../context/LanguageContext"
+import GoogleLoginButton from "../components/GoogleLoginButton"
 import bgImage from "../assets/background.avif"
+
+function isClientIdConfigured(value) {
+  if (!value) return false
+  const normalized = value.toLowerCase()
+  if (normalized.includes("your_google_client_id")) return false
+  if (normalized.includes("your_google_web_client_id")) return false
+  if (normalized.includes("your-id-here")) return false
+  return true
+}
 
 export default function Register() {
   const navigate = useNavigate()
   const { login, setUser } = useAuth()
+  const { t } = useLanguage()
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [username, setUsername] = useState("")
@@ -16,53 +28,12 @@ export default function Register() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
-  const googleBtnRef = useRef(null)
-
-  useEffect(() => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-    if (!clientId) return
-
-    const initializeGoogle = () => {
-      if (!window.google?.accounts?.id || !googleBtnRef.current) return
-
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleGoogleCredential,
-      })
-
-      googleBtnRef.current.innerHTML = ""
-      window.google.accounts.id.renderButton(googleBtnRef.current, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        shape: "pill",
-        text: "signup_with",
-        width: 360,
-      })
-    }
-
-    if (window.google?.accounts?.id) {
-      initializeGoogle()
-      return
-    }
-
-    const existing = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
-    if (existing) {
-      existing.addEventListener("load", initializeGoogle)
-      return () => existing.removeEventListener("load", initializeGoogle)
-    }
-
-    const script = document.createElement("script")
-    script.src = "https://accounts.google.com/gsi/client"
-    script.async = true
-    script.defer = true
-    script.onload = initializeGoogle
-    document.body.appendChild(script)
-
-    return () => {
-      script.onload = null
-    }
-  }, [])
+  const rawGoogleClientId = (
+    import.meta.env.VITE_GOOGLE_CLIENT_ID ||
+    import.meta.env.GOOGLE_CLIENT_ID ||
+    ""
+  ).trim()
+  const googleConfigured = isClientIdConfigured(rawGoogleClientId)
 
   async function handleGoogleCredential(response) {
     if (!response?.credential) return
@@ -159,7 +130,7 @@ export default function Register() {
           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
-          Back
+          {t("common.back", "Back")}
         </button>
 
         <h1 className="mb-2 leading-tight text-center">
@@ -173,7 +144,7 @@ export default function Register() {
               letterSpacing: "0.05em"
             }}
           >
-            Join the
+            {t("register.joinThe", "Join the")}
           </span>
           <span
             className="block text-5xl uppercase -mt-1"
@@ -185,17 +156,17 @@ export default function Register() {
               letterSpacing: "0.05em"
             }}
           >
-            Circle
+            {t("register.circle", "Circle")}
           </span>
         </h1>
-        <p className="text-cyan-400/70 text-xs font-bold uppercase tracking-widest mb-8 text-center">Create your account</p>
+        <p className="text-cyan-400/70 text-xs font-bold uppercase tracking-widest mb-8 text-center">{t("register.createAccount", "Create your account")}</p>
 
         <form onSubmit={onSubmit} className="space-y-5 relative z-0">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="FIRST NAME"
+                placeholder={t("register.firstName", "FIRST NAME")}
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 className="w-full bg-[#071428] text-white placeholder-white/30 px-5 py-4 rounded-2xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none font-bold tracking-wider transition-colors"
@@ -205,7 +176,7 @@ export default function Register() {
             <div className="flex-1">
               <input
                 type="text"
-                placeholder="LAST NAME"
+                placeholder={t("register.lastName", "LAST NAME")}
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 className="w-full bg-[#071428] text-white placeholder-white/30 px-5 py-4 rounded-2xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none font-bold tracking-wider transition-colors"
@@ -217,7 +188,7 @@ export default function Register() {
           <div className="relative">
             <input
               type="text"
-              placeholder="CHOOSE NICKNAME"
+              placeholder={t("register.nickname", "CHOOSE NICKNAME")}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-[#071428] text-white placeholder-white/30 px-6 py-4 rounded-2xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none font-bold tracking-wider text-center transition-colors"
@@ -228,7 +199,7 @@ export default function Register() {
           <div className="relative">
             <input
               type="email"
-              placeholder="EMAIL ADDRESS"
+              placeholder={t("register.emailAddress", "EMAIL ADDRESS")}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-[#071428] text-white placeholder-white/30 px-6 py-4 rounded-2xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none font-bold tracking-wider text-center transition-colors"
@@ -239,7 +210,7 @@ export default function Register() {
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="SECRET PASSWORD"
+              placeholder={t("register.secretPassword", "SECRET PASSWORD")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-[#071428] text-white placeholder-white/30 px-6 py-4 pr-14 rounded-2xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none font-bold tracking-wider text-center transition-colors"
@@ -275,29 +246,25 @@ export default function Register() {
             disabled={loading}
             className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-black italic py-4 rounded-2xl border-2 border-orange-300/40 shadow-[0_6px_0_0_#c2410c] hover:shadow-[0_4px_0_0_#c2410c] transition-all active:translate-y-1 active:shadow-none uppercase tracking-wider text-xl"
           >
-            {loading ? "JOINING..." : "Join Tribe"}
+            {loading ? t("register.joining", "JOINING...") : t("register.joinTribe", "Join Tribe")}
           </button>
 
           <div className="pt-1">
             <div className="flex items-center gap-3 text-[10px] uppercase tracking-widest text-white/40 mb-3">
               <div className="h-px bg-cyan-500/20 flex-1" />
-              or
+              {t("common.or", "or")}
               <div className="h-px bg-cyan-500/20 flex-1" />
             </div>
 
-            {import.meta.env.VITE_GOOGLE_CLIENT_ID ? (
-              <div className="flex justify-center">
-                <div ref={googleBtnRef} />
-              </div>
-            ) : (
-              <div className="text-[10px] text-cyan-400/60 font-bold uppercase tracking-wider text-center">
-                Set VITE_GOOGLE_CLIENT_ID to enable Google signup
-              </div>
-            )}
+            <GoogleLoginButton
+              disabled={!googleConfigured}
+              onCredentialResponse={handleGoogleCredential}
+              onLoginError={(msg) => setError(String(msg).toUpperCase())}
+            />
 
             {googleLoading && (
               <div className="text-[10px] text-cyan-200/80 font-bold uppercase tracking-wider text-center mt-2">
-                Verifying Google account...
+                {t("register.verifyingGoogle", "Verifying Google account...")}
               </div>
             )}
           </div>
@@ -308,7 +275,7 @@ export default function Register() {
             onClick={() => navigate("/login")}
             className="text-cyan-400 hover:text-orange-400 font-black italic uppercase tracking-tighter text-xs transition-colors"
           >
-            Already a member? Log in here →
+            {t("register.alreadyMember", "Already a member? Log in here")} →
           </button>
         </div>
       </div>

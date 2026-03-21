@@ -2,9 +2,11 @@ import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { api, withAuth } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
+import { useLanguage } from "../context/LanguageContext"
 
 export default function Otp() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const { setToken, setMfaVerified, setUser } = useAuth()
   const [otp, setOtp] = useState("")
   const [seconds, setSeconds] = useState(60)
@@ -36,7 +38,7 @@ export default function Otp() {
       await api.post("/otp/send", { loginTokenId, channel: loginMode === "phone" ? "sms" : "email" })
       setSeconds(60)
     } catch {
-      setError("Failed to resend")
+      setError(t("otp.failedResend", "Failed to resend"))
     } finally {
       setSending(false)
     }
@@ -59,14 +61,14 @@ export default function Otp() {
 
       navigate("/intro")
     } catch {
-      setError("Invalid code")
+      setError(t("otp.invalidCode", "Invalid code"))
     }
   }
 
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="glass p-8 rounded-2xl w-full max-w-md">
-        <div className="text-xl mb-4">Enter 6-digit OTP</div>
+        <div className="text-xl mb-4">{t("otp.enterOtp", "Enter 6-digit OTP")}</div>
         <form onSubmit={verify} className="space-y-3">
           <input
             inputMode="numeric"
@@ -79,14 +81,14 @@ export default function Otp() {
             required
           />
           <div className="flex items-center justify-between text-sm">
-            <div>Resend in {seconds}s</div>
+            <div>{t("otp.resendIn", "Resend in")} {seconds}s</div>
             <button type="button" disabled={seconds>0 || sending} onClick={resend} className="text-banana-dark">
-              Resend OTP
+              {t("otp.resendOtp", "Resend OTP")}
             </button>
           </div>
           {error && <div className="text-red-600 text-sm">{error}</div>}
-          {devCode && <div className="text-xs text-black/60">Dev code {devCode}</div>}
-          <button className="w-full px-4 py-3 rounded-xl bg-banana text-black font-semibold">Verify</button>
+          {devCode && <div className="text-xs text-black/60">{t("otp.devCode", "Dev code")} {devCode}</div>}
+          <button className="w-full px-4 py-3 rounded-xl bg-banana text-black font-semibold">{t("otp.verify", "Verify")}</button>
         </form>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react"
+import { useLanguage } from "../context/LanguageContext"
 
 const googleClientId = (
   import.meta.env.VITE_GOOGLE_CLIENT_ID ||
@@ -20,9 +21,13 @@ export default function GoogleLoginButton({
   onCredentialResponse,
   onLoginError,
 }) {
+  const { language } = useLanguage()
   const buttonRef = useRef(null)
   const credentialHandlerRef = useRef(onCredentialResponse)
   const errorHandlerRef = useRef(onLoginError)
+
+  // Match Google button language with selected app language.
+  const googleLocale = language === "ta" ? "ta" : language === "si" ? "si" : "en"
 
   useEffect(() => {
     credentialHandlerRef.current = onCredentialResponse
@@ -37,85 +42,78 @@ export default function GoogleLoginButton({
     }
 
     let cancelled = false
-    let poll = null
 
-    const initGoogle = () => {
-      if (cancelled) return
-      if (!window.google?.accounts?.id || !buttonRef.current) return
+    const loadGoogleScript = (locale) => {
+      return new Promise((resolve, reject) => {
+        const scriptId = "banana-google-gsi-client"
+        const current = document.getElementById(scriptId)
 
-      if (!window.__bananaGoogleCredentialCallback) {
-        window.__bananaGoogleCredentialCallback = (credentialResponse) => {
+        if (current && current.getAttribute("data-locale") !== locale) {
+          current.remove()
+          try {
+            delete window.google
+          } catch (_) {
+            window.google = undefined
+          }
+        }
+
+        if (window.google?.accounts?.id) {
+          resolve()
+          return
+        }
+
+        const script = document.createElement("script")
+        script.id = scriptId
+        script.src = `https://accounts.google.com/gsi/client?hl=${locale}`
+        script.async = true
+        script.defer = true
+        script.setAttribute("data-locale", locale)
+        script.onload = () => resolve()
+        script.onerror = () => reject(new Error("Google script did not load"))
+        document.body.appendChild(script)
+      })
+    }
+
+    const initGoogle = async () => {
+      try {
+        await loadGoogleScript(googleLocale)
+        if (cancelled || !window.google?.accounts?.id || !buttonRef.current) return
+
+        const credentialCallback = (credentialResponse) => {
           if (!credentialResponse?.credential) {
             errorHandlerRef.current?.("Google did not return a credential")
             return
           }
           credentialHandlerRef.current?.(credentialResponse)
         }
-      }
 
-      if (!window.__bananaGoogleInitialized) {
         window.google.accounts.id.initialize({
           client_id: googleClientId,
-          callback: window.__bananaGoogleCredentialCallback,
+          callback: credentialCallback,
           auto_select: false,
         })
-        window.__bananaGoogleInitialized = true
-      }
 
-      buttonRef.current.innerHTML = ""
-      window.google.accounts.id.renderButton(buttonRef.current, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        text: "continue_with",
-        shape: "pill",
-        logo_alignment: "left",
-        width: "320",
-      })
-
-      if (poll) {
-        window.clearInterval(poll)
-        poll = null
+        buttonRef.current.innerHTML = ""
+        window.google.accounts.id.renderButton(buttonRef.current, {
+          type: "standard",
+          theme: "outline",
+          size: "large",
+          text: "continue_with",
+          shape: "pill",
+          logo_alignment: "left",
+          width: "320",
+        })
+      } catch (err) {
+        errorHandlerRef.current?.(err?.message || "Google script did not load")
       }
     }
 
-    if (window.google?.accounts?.id) {
-      initGoogle()
-    } else {
-      poll = window.setInterval(() => {
-        if (!window.google?.accounts?.id) {
-          return
-        }
-        initGoogle()
-      }, 200)
-
-      const timeout = window.setTimeout(() => {
-        if (!window.google?.accounts?.id) {
-          if (poll) {
-            window.clearInterval(poll)
-            poll = null
-          }
-          errorHandlerRef.current?.("Google script did not load")
-        }
-      }, 8000)
-
-      return () => {
-        cancelled = true
-        if (poll) {
-          window.clearInterval(poll)
-          poll = null
-        }
-        window.clearTimeout(timeout)
-      }
-    }
+    initGoogle()
 
     return () => {
       cancelled = true
-      if (poll) {
-        window.clearInterval(poll)
-      }
     }
-  }, [disabled])
+  }, [disabled, googleLocale])
 
   if (disabled) {
     return (

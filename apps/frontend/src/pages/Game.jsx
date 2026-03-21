@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom"
 import lottie from "lottie-web"
 import { withAuth } from "../utils/api"
 import { useAuth } from "../context/AuthContext"
+import { useLanguage } from "../context/LanguageContext"
 import bananaImg from "../assets/banana.svg"
 import bgImage from "../assets/backgroundg.webp"
 import confettiBlastAnim from "../assets/Confetti Partyyy!!.json"
@@ -11,6 +12,7 @@ import ElectroBorder from "../components/ElectroBorder"
 export default function Game() {
   const navigate = useNavigate()
   const { token, user } = useAuth()
+  const { t } = useLanguage()
   const location = useLocation()
   const levelNo = location.state?.level || 1
   const isMathMode = levelNo >= 6
@@ -286,9 +288,9 @@ export default function Game() {
       {showLevelShift && (
         <div className="absolute inset-0 z-40 bg-[#030b22]/85 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center animate-in zoom-in duration-500">
-            <div className="text-cyan-300 text-sm md:text-base font-black uppercase tracking-[0.3em]">Level Up</div>
-            <div className="text-4xl md:text-6xl font-black uppercase text-white mt-2">Math Terminal</div>
-            <div className="text-cyan-200/80 text-sm md:text-lg font-bold uppercase tracking-[0.2em] mt-2">Mechanics Shift Unlocked</div>
+            <div className="text-cyan-300 text-sm md:text-base font-black uppercase tracking-[0.3em]">{t("game.levelUp", "Level Up")}</div>
+            <div className="text-4xl md:text-6xl font-black uppercase text-white mt-2">{t("game.mathTerminal", "Math Terminal")}</div>
+            <div className="text-cyan-200/80 text-sm md:text-lg font-bold uppercase tracking-[0.2em] mt-2">{t("game.mechanicsShiftUnlocked", "Mechanics Shift Unlocked")}</div>
           </div>
         </div>
       )}
@@ -296,12 +298,12 @@ export default function Game() {
       {/* Level Number Indicator - Left Side */}
       <div className="absolute left-4 top-24 z-30 flex flex-col gap-2">
         <div className="bg-[#0a2f5e] border-4 border-cyan-500 rounded-2xl p-3 shadow-[0_4px_0_0_#07122d] text-white flex flex-col items-center min-w-[80px]">
-          <span className="text-[10px] font-black uppercase italic tracking-widest text-cyan-200/70">Level</span>
+          <span className="text-[10px] font-black uppercase italic tracking-widest text-cyan-200/70">{t("game.level", "Level")}</span>
           <span className="text-4xl font-black italic tracking-tighter">{levelNo}</span>
         </div>
         <div className={`border-4 rounded-2xl p-3 shadow-[0_4px_0_0_#07122d] text-white flex flex-col items-center min-w-[80px] ${isMathMode ? 'bg-purple-900 border-purple-400' : 'bg-orange-900 border-orange-400'}`}>
-          <span className="text-[10px] font-black uppercase italic tracking-widest text-cyan-200/70">Score</span>
-          <span className={`text-3xl font-black italic tracking-tighter ${isMathMode ? 'text-purple-200' : 'text-orange-200'}`}>{score}</span>
+          <span className="text-[10px] font-black uppercase italic tracking-widest text-cyan-200/70">{t("game.score", "Score")}</span>
+          <span className={`game-clear-number text-3xl font-black tracking-tighter ${isMathMode ? 'text-purple-200' : 'text-orange-200'}`}>{score}</span>
         </div>
       </div>
 
@@ -402,7 +404,7 @@ export default function Game() {
           glowBlur={22}
         >
           <div className="game-inner-bg rounded-xl overflow-hidden shadow-2xl p-5 md:p-8 min-h-[560px] flex flex-col">
-            <h1 className="game-champ-title text-center mb-4">Brain Adventure</h1>
+            <h1 className="game-champ-title text-center mb-4">{t("game.brainAdventure", "Brain Adventure")}</h1>
 
             {/* Header section matching the image */}
             <div className="mb-4">
@@ -415,9 +417,9 @@ export default function Game() {
 
             {/* Puzzle Progress and Attempts */}
             <div className="flex justify-between items-center mb-4 text-sm md:text-3xl">
-              <div className="game-outline-text">Puzzle {puzzleCount} / 3</div>
+              <div className="game-outline-text">{t("game.puzzle", "Puzzle")} {puzzleCount} / 3</div>
               <div className="flex gap-2 items-center">
-                <span className="game-outline-text">Attempts:</span>
+                <span className="game-outline-text">{t("game.attempts", "Attempts")}:</span>
                 <div className="flex gap-1">
                   {[1, 2, 3].map(i => (
                     <div
@@ -436,8 +438,7 @@ export default function Game() {
                   <div className="flex items-center gap-4 md:gap-8 mb-4">
                     <span className="game-over-neon-symbol">◁</span>
                     <div className="game-over-neon-title text-center">
-                      <div className="game-over-neon-green text-5xl md:text-7xl">Game</div>
-                      <div className="game-over-neon-pink text-5xl md:text-7xl">Over</div>
+                      <div className="game-over-neon-green text-5xl md:text-7xl">{t("game.gameOver", "Game Over")}</div>
                     </div>
                     <span className="game-over-neon-symbol">▷</span>
                   </div>
@@ -448,19 +449,19 @@ export default function Game() {
                     onClick={() => { resetGame(); loadPuzzle() }}
                     className="game-cta-btn px-8 py-2 rounded-2xl text-2xl"
                   >
-                    Play Again
+                    {t("game.playAgain", "Play Again")}
                   </button>
                 </div>
               )}
 
               {isPaused && (
                 <div className="absolute inset-0 bg-[#07122d]/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl animate-in fade-in duration-300">
-                  <div className="text-cyan-200 text-4xl font-black italic uppercase tracking-tighter mb-4">GAME PAUSED</div>
+                  <div className="text-cyan-200 text-4xl font-black italic uppercase tracking-tighter mb-4">{t("game.gamePaused", "Game Paused")}</div>
                   <button
                     onClick={() => setIsPaused(false)}
                     className={`px-8 py-3 rounded-full font-black italic uppercase shadow-lg hover:scale-110 transition-transform ${isMathMode ? 'bg-purple-500 text-white' : 'bg-orange-500 text-[#07122d]'}`}
                   >
-                    RESUME 🎮
+                    {t("game.resume", "Resume")} 🎮
                   </button>
                 </div>
               )}
@@ -491,7 +492,7 @@ export default function Game() {
 
               {isMathMode && puzzle && (
                 <div className="math-terminal-shell w-full max-w-4xl min-h-[390px] p-5 md:p-8 rounded-2xl flex flex-col items-center justify-center">
-                  <div className="math-terminal-badge mb-4">Math Terminal</div>
+                  <div className="math-terminal-badge mb-4">{t("game.mathTerminal", "Math Terminal")}</div>
                   <div className="math-terminal-question text-center mb-4">
                     {puzzle.question_text || puzzle.question}
                   </div>
@@ -530,7 +531,7 @@ export default function Game() {
                     disabled={isPaused || isGameOver}
                     className="math-submit-btn mt-4"
                   >
-                    Submit
+                    {t("game.submit", "Submit")}
                   </button>
                 </div>
               )}
@@ -576,11 +577,11 @@ export default function Game() {
 
               {!isMathMode && (
                 <>
-                  <div className="game-outline-text text-3xl mb-3">Quest is ready.</div>
+                  <div className="game-outline-text text-3xl mb-3">{t("game.questReady", "Quest is ready.")}</div>
 
                   <div className="flex flex-col md:flex-row items-center gap-3">
                     <div className="game-outline-text text-2xl flex items-center gap-2">
-                      Enter the missing digit:
+                      {t("game.enterMissingDigit", "Enter the missing digit:")}
                       <div className="game-input-shell rounded-2xl p-1.5">
                         <input
                           inputMode="numeric"
@@ -594,7 +595,7 @@ export default function Game() {
                     </div>
 
                     <div className="flex gap-2 ml-auto items-center">
-                      <button onClick={submit} disabled={isPaused || isGameOver} className="game-cta-btn px-8 py-1.5 disabled:opacity-50 rounded-2xl text-4xl">Submit</button>
+                      <button onClick={submit} disabled={isPaused || isGameOver} className="game-cta-btn px-8 py-1.5 disabled:opacity-50 rounded-2xl text-4xl">{t("game.submit", "Submit")}</button>
                       <div className="flex gap-1">
                         <button
                           onClick={() => {
@@ -607,7 +608,7 @@ export default function Game() {
                           }}
                           disabled={puzzleCount <= 1 || isPaused || isGameOver}
                           className="game-cta-btn px-3 py-1.5 disabled:opacity-50 rounded-xl text-2xl transition-colors leading-none"
-                          title="Previous Puzzle"
+                          title={t("game.previousPuzzle", "Previous Puzzle")}
                         >
                           ←
                         </button>
@@ -622,7 +623,7 @@ export default function Game() {
                           }}
                           disabled={puzzleCount >= 3 || isPaused || isGameOver}
                           className="game-cta-btn px-3 py-1.5 disabled:opacity-50 rounded-xl text-2xl transition-colors leading-none"
-                          title="Next Puzzle"
+                          title={t("game.nextPuzzle", "Next Puzzle")}
                         >
                           →
                         </button>
@@ -634,18 +635,18 @@ export default function Game() {
 
               {isMathMode && (
                 <div className="mt-2 text-center text-cyan-100/80 text-xs md:text-sm font-bold uppercase tracking-[0.16em]">
-                  Math mode engaged • Timer accelerates with level
+                  {t("game.mathModeEngaged", "Math mode engaged • Timer accelerates with level")}
                 </div>
               )}
 
               <div className="mt-3 flex justify-between items-center text-[10px] font-bold text-cyan-100/70 uppercase tracking-wider">
-                <span className="game-outline-text text-lg">Total Score: <span className={`text-2xl font-black ${isMathMode ? 'text-purple-300' : 'text-orange-300'}`}>{score}</span></span>
+                <span className="game-outline-text text-lg">{t("game.totalScore", "Total Score:")} <span className={`game-clear-number text-2xl font-black ${isMathMode ? 'text-purple-300' : 'text-orange-300'}`}>{score}</span></span>
                 {isGameOver && (
                   <button
                     onClick={resetGame}
                     className="game-outline-text text-lg hover:underline"
                   >
-                    Play Again
+                    {t("game.playAgain", "Play Again")}
                   </button>
                 )}
               </div>

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import { useLanguage } from "../context/LanguageContext"
 import { api } from "../utils/api"
 
 export default function Leaderboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { t } = useLanguage()
   const [players, setPlayers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -18,7 +20,7 @@ export default function Leaderboard() {
         setPlayers(r.data)
       } catch (err) {
         console.error("Failed to fetch leaderboard", err)
-        setError("Could not load leaderboard. Please try again.")
+        setError(t("leaderboard.loadError", "Could not load leaderboard. Please try again."))
       } finally {
         setLoading(false)
       }
@@ -34,10 +36,10 @@ export default function Leaderboard() {
           onClick={() => navigate("/home")}
           className="flex items-center gap-2 text-[#5d3a1a] font-black italic uppercase hover:scale-105 transition-transform"
         >
-          <span className="text-2xl">←</span> Back
+          <span className="text-2xl">←</span> {t("common.back", "Back")}
         </button>
         <h1 className="text-[#5d3a1a] text-3xl md:text-5xl font-black italic uppercase tracking-tighter drop-shadow-sm">
-          LEADERBOARD
+          {t("leaderboard.title", "Leaderboard")}
         </h1>
         <div className="w-20"></div> {/* Spacer for alignment */}
       </div>
@@ -48,7 +50,7 @@ export default function Leaderboard() {
           
           {loading ? (
             <div className="text-white text-center font-black italic uppercase text-2xl py-20 animate-pulse">
-              Loading Champions...
+              {t("leaderboard.loadingChampions", "Loading Champions...")}
             </div>
           ) : error ? (
             <div className="text-red-200 text-center font-black italic uppercase text-xl py-20">
@@ -83,10 +85,10 @@ export default function Leaderboard() {
                     {/* Name and Stats */}
                     <div className="flex-1">
                       <div className={`font-black italic uppercase tracking-tighter text-lg ${isMe ? "text-white" : "text-[#5d3a1a]"}`}>
-                        {player.username} {isMe && "(YOU)"}
+                        {player.username} {isMe && `(${t("leaderboard.you", "YOU")})`}
                       </div>
                       <div className={`text-[10px] font-bold uppercase tracking-widest ${isMe ? "text-pink-200" : "text-[#8b5a2b]/60"}`}>
-                        {player.rank} • Level {player.current_level}
+                        {player.rank} • {t("leaderboard.level", "Level")} {player.current_level}
                       </div>
                     </div>
 
@@ -96,7 +98,7 @@ export default function Leaderboard() {
                         {player.score}
                       </div>
                       <div className={`text-[8px] font-black uppercase italic ${isMe ? "text-pink-200" : "text-[#8b5a2b]/60"}`}>
-                        Total Marks
+                        {t("leaderboard.totalMarks", "Total Marks")}
                       </div>
                     </div>
                   </div>
@@ -105,7 +107,7 @@ export default function Leaderboard() {
 
               {players.length === 0 && (
                 <div className="text-white/60 text-center font-black italic uppercase py-10">
-                  No players found yet. Be the first!
+                  {t("leaderboard.noPlayers", "No players found yet. Be the first!")}
                 </div>
               )}
             </div>
