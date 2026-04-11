@@ -140,6 +140,19 @@ html, body, #root {
   border-color: #ff9a6e;
 }
 
+.game-input-shell {
+  background: linear-gradient(180deg, #eef7ff 0%, #ffffff 100%);
+  border: 3px solid #b8c5d9;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.9), 0 4px 0 #7b8ca8;
+}
+
+.game-input-shell input {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: #07122d;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+}
+
 .border-beam {
   position: relative;
   border-radius: 16px;

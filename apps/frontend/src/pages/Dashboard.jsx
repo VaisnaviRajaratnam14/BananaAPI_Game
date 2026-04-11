@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useLanguage } from "../context/LanguageContext"
-import heroVideo from "../assets/b_ad.mp4"
+import heroVideo from "../assets/video/WhatsApp Video 2026-04-11 at 2.39.23 PM.mp4"
 import quizBtn from "../assets/Quiz button.webm"
 
 export default function Dashboard() {
@@ -24,7 +24,7 @@ export default function Dashboard() {
       <video
         ref={videoRef}
         src={heroVideo}
-        className="absolute inset-0 w-full h-full object-contain"
+        className="absolute inset-0 w-full h-full object-cover"
         autoPlay
         loop
         muted={muted}

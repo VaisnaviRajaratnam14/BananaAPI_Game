@@ -15,7 +15,7 @@ export default function Account() {
 
   const profile = user?.profile || { diamonds: 0, total_marks: 0, rank: t("common.novice", "Novice"), current_level: 1, gifts: 0 }
   const userLevels = user?.levels || []
-  const totalStars = userLevels.reduce((acc, l) => acc + l.stars_earned, 0)
+  const totalStars = Number(user?.total_stars || 0)
 
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60)
@@ -245,8 +245,7 @@ export default function Account() {
 
                 <div className="flex flex-wrap justify-center gap-4 mb-10">
                   {[
-                    ["bg-cyan-500","border-cyan-700","text-white","💎",profile.diamonds],
-                    ["bg-orange-400","border-orange-600","text-white","⭐",totalStars],
+                    ["bg-cyan-500","border-cyan-700","text-white","⭐",profile.diamonds],
                     ["bg-[#0a2f5e]","border-cyan-500","text-cyan-200","🎁",profile.gifts],
                     ["bg-orange-500","border-orange-700","text-white","🎮",`Lv.${profile.current_level}`]
                   ].map(([bg, border, color, icon, val]) => (

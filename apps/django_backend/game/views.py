@@ -373,11 +373,31 @@ class CollectRewardsView(APIView):
     def post(self, request):
         user = request.user
         profile = user.profile
-        diamonds_earned = request.data.get('diamonds', 0)
-        gifts_earned = request.data.get('gifts', 0)
-        level_num = request.data.get('level', 1)
-        stars = request.data.get('stars', 0)
+        raw_diamonds = request.data.get('diamonds', 0)
+        raw_gifts = request.data.get('gifts', 0)
+        raw_level_num = request.data.get('level', 1)
+        raw_stars = request.data.get('stars', 0)
         raw_time_taken = request.data.get('time', 0)
+
+        try:
+            diamonds_earned = int(raw_diamonds)
+        except (TypeError, ValueError):
+            diamonds_earned = 0
+
+        try:
+            gifts_earned = int(raw_gifts)
+        except (TypeError, ValueError):
+            gifts_earned = 0
+
+        try:
+            level_num = int(raw_level_num)
+        except (TypeError, ValueError):
+            level_num = 1
+
+        try:
+            stars = float(raw_stars)
+        except (TypeError, ValueError):
+            stars = 0
 
         try:
             time_taken = int(raw_time_taken)
@@ -412,6 +432,30 @@ class CollectRewardsView(APIView):
         profile.save()
         
         return Response(UserSerializer(user).data)
+
+
+class SaveBananaView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+        raw_count = request.data.get('count', 1)
+
+        try:
+            count = int(raw_count)
+        except (TypeError, ValueError):
+            return Response({"error": "count must be a valid integer"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if count < 1:
+            return Response({"error": "count must be at least 1"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if count > 20:
+            return Response({"error": "count must be 20 or less"}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile.gifts += count
+        profile.save(update_fields=['gifts'])
+
+        return Response({"gifts": profile.gifts}, status=status.HTTP_200_OK)
 
 class LeaderboardView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]

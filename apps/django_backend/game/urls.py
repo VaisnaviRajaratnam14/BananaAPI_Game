@@ -3,6 +3,7 @@ from .views import (
     RegisterView, UserStatsView, UpdateProfileView, 
     CollectRewardsView, LeaderboardView, ChangePasswordView,
     PuzzleView, CustomLoginView, GoogleAuthView, ForgotPasswordView,
+    SaveBananaView,
     ResetPasswordConfirmView
 )
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -19,5 +20,6 @@ urlpatterns = [
     path('user/update/', UpdateProfileView.as_view(), name='user_update'),
     path('game/puzzle/', PuzzleView.as_view(), name='game_puzzle'),
     path('game/collect/', CollectRewardsView.as_view(), name='game_collect'),
+    path('game/save-banana/', SaveBananaView.as_view(), name='game_save_banana'),
     path('leaderboard/', LeaderboardView.as_view(), name='leaderboard'),
 ]

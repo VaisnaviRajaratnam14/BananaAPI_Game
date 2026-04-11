@@ -6,7 +6,7 @@ from django.dispatch import receiver
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     nickname = models.CharField(max_length=100, blank=True)
-    diamonds = models.IntegerField(default=500)
+    diamonds = models.IntegerField(default=0)
     energy = models.IntegerField(default=10)
     streak = models.IntegerField(default=0)
     gifts = models.IntegerField(default=0)

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { useLanguage } from "../context/LanguageContext"
-import introVideo from "../assets/b_ad.mp4"
+import introVideo from "../assets/video/WhatsApp Video 2026-04-11 at 2.39.23 PM.mp4"
 
 
 export default function IntroVideo() {
@@ -33,7 +33,7 @@ export default function IntroVideo() {
         muted={muted}
         preload="auto"
         playsInline
-        className="w-full h-full object-contain absolute inset-0"
+        className="w-full h-full object-cover absolute inset-0"
       >
         <source src={introVideo} type="video/mp4" />
         {t("intro.browserNoVideo", "Your browser does not support the video tag.")}
