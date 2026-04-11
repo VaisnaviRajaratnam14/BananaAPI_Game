@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import heroVideo from "../assets/videob.mp4"
+import { useLanguage } from "../context/LanguageContext"
+import heroVideo from "../assets/video/WhatsApp Video 2026-04-11 at 2.39.23 PM.mp4"
 import quizBtn from "../assets/Quiz button.webm"
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   const videoRef = useRef(null)
   const [muted, setMuted] = useState(true)
 
@@ -38,8 +40,8 @@ export default function Dashboard() {
             videoRef.current.play().catch(()=>{})
           }
         }}
-        aria-label={muted ? "Turn sound on" : "Turn sound off"}
-        title={muted ? "Sound Off" : "Sound On"}
+        aria-label={muted ? t("dashboard.soundOn", "Turn sound on") : t("dashboard.soundOff", "Turn sound off")}
+        title={muted ? t("dashboard.soundOn", "Turn sound on") : t("dashboard.soundOff", "Turn sound off")}
         className="absolute top-6 right-6 z-10 px-3 py-2 btn-orange"
       >
         <span className="text-xl">{muted ? "🔇" : "🔊"}</span>
@@ -47,8 +49,8 @@ export default function Dashboard() {
       <button
         onClick={() => navigate("/home")}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10"
-        aria-label="Start Quiz"
-        title="Start Quiz"
+        aria-label={t("dashboard.startQuiz", "Start Quiz")}
+        title={t("dashboard.startQuiz", "Start Quiz")}
       >
         <video
           src={quizBtn}

@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { jwtDecode } from "jwt-decode"
 import { useAuth } from "../context/AuthContext"
+import { useLanguage } from "../context/LanguageContext"
 import { api, withAuth } from "../utils/api"
 import GoogleLoginButton from "../components/GoogleLoginButton"
 import bgImage from "../assets/background.avif"
@@ -23,6 +24,7 @@ export default function Login() {
   const [error, setError] = useState("")
   const [googleUserPreview, setGoogleUserPreview] = useState(null)
   const { login, setUser } = useAuth()
+  const { t } = useLanguage()
   const navigate = useNavigate()
   const rawGoogleClientId = (
     import.meta.env.VITE_GOOGLE_CLIENT_ID ||
@@ -39,7 +41,7 @@ export default function Login() {
     try {
       const decoded = jwtDecode(credentialResponse.credential)
       const previewUser = {
-        name: decoded?.name || "Player",
+        name: decoded?.name || t("login.player", "Player"),
         email: decoded?.email || "",
         picture: decoded?.picture || "",
       }
@@ -150,7 +152,7 @@ export default function Login() {
               letterSpacing: "0.05em"
             }}
           >
-            Player
+            {t("login.player", "Player")}
           </span>
           <span
             className="block text-5xl uppercase -mt-1"
@@ -162,16 +164,16 @@ export default function Login() {
               letterSpacing: "0.05em"
             }}
           >
-            Login
+            {t("login.login", "Login")}
           </span>
         </h1>
-        <p className="text-cyan-400/70 text-sm font-bold uppercase tracking-widest mb-8">Welcome back, explorer</p>
+        <p className="text-cyan-400/70 text-sm font-bold uppercase tracking-widest mb-8">{t("login.welcomeBack", "Welcome back, explorer")}</p>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="relative">
             <input
               type="text"
-              placeholder="USERNAME OR EMAIL"
+              placeholder={t("login.usernameOrEmail", "USERNAME OR EMAIL")}
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               className="w-full bg-[#071428] text-white placeholder-white/30 px-6 py-4 rounded-2xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none font-bold tracking-wider text-center transition-colors"
@@ -182,7 +184,7 @@ export default function Login() {
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              placeholder="PASSWORD"
+              placeholder={t("login.password", "PASSWORD")}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-[#071428] text-white placeholder-white/30 px-6 py-4 pr-14 rounded-2xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none font-bold tracking-wider text-center transition-colors"
@@ -218,13 +220,13 @@ export default function Login() {
             disabled={loading}
             className="w-full bg-orange-500 hover:bg-orange-400 disabled:opacity-50 text-white font-black italic py-4 rounded-2xl border-2 border-orange-300/40 shadow-[0_6px_0_0_#c2410c] hover:shadow-[0_4px_0_0_#c2410c] transition-all active:translate-y-1 active:shadow-none uppercase tracking-wider text-xl"
           >
-            {loading ? "AUTHENTICATING..." : "Start Adventure"}
+            {loading ? t("login.authenticating", "AUTHENTICATING...") : t("login.startAdventure", "Start Adventure")}
           </button>
 
           <div className="pt-1">
             <div className="flex items-center gap-3 text-xs uppercase tracking-widest text-white/40 mb-3">
               <div className="h-px bg-cyan-500/20 flex-1" />
-              or
+              {t("common.or", "or")}
               <div className="h-px bg-cyan-500/20 flex-1" />
             </div>
 
@@ -236,7 +238,7 @@ export default function Login() {
 
             {googleLoading && (
               <div className="mt-3 text-xs text-cyan-200/80 font-bold uppercase tracking-wider text-center">
-                Verifying Google account...
+                {t("login.verifyingGoogle", "Verifying Google account...")}
               </div>
             )}
 
@@ -251,7 +253,7 @@ export default function Login() {
                 )}
                 <div className="text-left">
                   <p className="text-cyan-200 text-xs font-bold uppercase tracking-wide">
-                    Welcome, {googleUserPreview.name}
+                    {t("login.welcome", "Welcome")}, {googleUserPreview.name}
                   </p>
                   {googleUserPreview.email && (
                     <p className="text-cyan-300/70 text-[10px] tracking-wide">{googleUserPreview.email}</p>
@@ -264,10 +266,10 @@ export default function Login() {
 
         <div className="mt-8 pt-6 border-t border-cyan-500/20 flex flex-col gap-3">
           <Link to="/register" className="text-cyan-400 hover:text-orange-400 font-black italic uppercase tracking-tighter text-base transition-colors">
-            New Explorer? Join Now!
+            {t("login.newExplorer", "New Explorer? Join Now!")}
           </Link>
           <Link to="/forgot" className="text-white/40 hover:text-white/70 font-bold italic uppercase tracking-tighter text-xs transition-colors">
-            Forgot Password?
+            {t("login.forgotPassword", "Forgot Password?")}
           </Link>
         </div>
       </div>

@@ -8,8 +8,8 @@ export default function BackgroundMusic() {
   const [loadError, setLoadError] = useState(false)
   const audioRef = useRef(null)
   
-  // Hide music on landing, login, register, otp pages
-  const hiddenPages = ["/login", "/register", "/otp", "/intro"]
+  // Hide music on auth/intro pages
+  const hiddenPages = ["/login", "/forgot", "/reset-password", "/register", "/otp", "/intro"]
   const isHidden = hiddenPages.includes(location.pathname)
 
   useEffect(() => {

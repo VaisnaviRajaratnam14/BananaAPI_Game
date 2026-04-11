@@ -3,7 +3,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
+from django.core.mail import send_mail
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
 from .models import Profile, Level
 from .serializers import (
     RegisterSerializer, UserSerializer, ProfileSerializer, 
@@ -11,6 +15,7 @@ from .serializers import (
 )
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.db.models import Q
 import math
 import os
 import requests
@@ -289,17 +294,110 @@ class ChangePasswordView(APIView):
         user.save()
         return Response({"message": "Password updated successfully"})
 
+class ForgotPasswordView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        identifier = (request.data.get('identifier') or '').strip()
+        if not identifier:
+            return Response({"error": "identifier is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user_model = get_user_model()
+        user = user_model.objects.filter(
+            Q(username__iexact=identifier) | Q(email__iexact=identifier)
+        ).first()
+
+        # Always return success message to avoid account enumeration.
+        if not user or not getattr(user, "email", None):
+            return Response({"message": "If the account exists, a password reset link has been sent"})
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        frontend_base = (os.getenv("FRONTEND_URL", "http://localhost:5173") or "http://localhost:5173").rstrip("/")
+        reset_link = f"{frontend_base}/reset-password?uid={uid}&token={token}"
+
+        subject = "Banana Game Password Reset"
+        message = (
+            "We received a request to reset your password.\n\n"
+            f"Reset link: {reset_link}\n\n"
+            "If you did not request this, you can safely ignore this email."
+        )
+
+        try:
+            send_mail(
+                subject,
+                message,
+                getattr(settings, "DEFAULT_FROM_EMAIL", "no-reply@banana-game.local"),
+                [user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            return Response({"error": f"Failed to send reset email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({"message": "If the account exists, a password reset link has been sent"})
+
+
+class ResetPasswordConfirmView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        uid = (request.data.get("uid") or "").strip()
+        token = (request.data.get("token") or "").strip()
+        new_password = request.data.get("newPassword")
+
+        if not uid or not token or not new_password:
+            return Response({"error": "uid, token and newPassword are required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = RegisterSerializer()
+        try:
+            serializer.validate_password(new_password)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = get_user_model().objects.get(pk=user_id)
+        except Exception:
+            return Response({"error": "Invalid or expired reset link"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"error": "Invalid or expired reset link"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.set_password(new_password)
+        user.save()
+        return Response({"message": "Password reset successfully"})
+
 class CollectRewardsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         user = request.user
         profile = user.profile
-        diamonds_earned = request.data.get('diamonds', 0)
-        gifts_earned = request.data.get('gifts', 0)
-        level_num = request.data.get('level', 1)
-        stars = request.data.get('stars', 0)
+        raw_diamonds = request.data.get('diamonds', 0)
+        raw_gifts = request.data.get('gifts', 0)
+        raw_level_num = request.data.get('level', 1)
+        raw_stars = request.data.get('stars', 0)
         raw_time_taken = request.data.get('time', 0)
+
+        try:
+            diamonds_earned = int(raw_diamonds)
+        except (TypeError, ValueError):
+            diamonds_earned = 0
+
+        try:
+            gifts_earned = int(raw_gifts)
+        except (TypeError, ValueError):
+            gifts_earned = 0
+
+        try:
+            level_num = int(raw_level_num)
+        except (TypeError, ValueError):
+            level_num = 1
+
+        try:
+            stars = float(raw_stars)
+        except (TypeError, ValueError):
+            stars = 0
 
         try:
             time_taken = int(raw_time_taken)
@@ -334,6 +432,30 @@ class CollectRewardsView(APIView):
         profile.save()
         
         return Response(UserSerializer(user).data)
+
+
+class SaveBananaView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        profile = request.user.profile
+        raw_count = request.data.get('count', 1)
+
+        try:
+            count = int(raw_count)
+        except (TypeError, ValueError):
+            return Response({"error": "count must be a valid integer"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if count < 1:
+            return Response({"error": "count must be at least 1"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if count > 20:
+            return Response({"error": "count must be 20 or less"}, status=status.HTTP_400_BAD_REQUEST)
+
+        profile.gifts += count
+        profile.save(update_fields=['gifts'])
+
+        return Response({"gifts": profile.gifts}, status=status.HTTP_200_OK)
 
 class LeaderboardView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]

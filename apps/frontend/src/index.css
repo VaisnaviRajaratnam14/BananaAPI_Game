@@ -140,6 +140,19 @@ html, body, #root {
   border-color: #ff9a6e;
 }
 
+.game-input-shell {
+  background: linear-gradient(180deg, #eef7ff 0%, #ffffff 100%);
+  border: 3px solid #b8c5d9;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,0.9), 0 4px 0 #7b8ca8;
+}
+
+.game-input-shell input {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: #07122d;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+}
+
 .border-beam {
   position: relative;
   border-radius: 16px;
@@ -235,11 +248,24 @@ html, body, #root {
 }
 
 .game-timer-pill {
-  font-family: "Luckiest Guy", cursive;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-weight: 800;
   letter-spacing: 0.03em;
-  background: linear-gradient(90deg, #0b2f8b 0%, #17bad2 55%, #ff9a2a 100%);
+  background: #ffffff;
+  color: #111827;
   border: 3px solid #4f6079;
   box-shadow: inset 0 0 0 3px #b8c5d9, 0 4px 0 #44526a, 0 10px 20px rgba(0, 0, 0, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+
+.game-clear-number {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .puzzle-stage {
@@ -250,9 +276,13 @@ html, body, #root {
 }
 
 .game-input-shell {
-  background: linear-gradient(90deg, #0b3e98 0%, #14bdd4 50%, #ff9628 100%);
+  background: #ffffff;
   border: 2px solid #576888;
   box-shadow: inset 0 0 0 2px #b7c4d9, 0 3px 0 #435470;
+}
+
+.game-input-shell input {
+  color: #111827;
 }
 
 .game-cta-btn {

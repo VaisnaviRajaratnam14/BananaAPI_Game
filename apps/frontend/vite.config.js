@@ -7,7 +7,7 @@ export default defineConfig({
   envDir: '../../',
   envPrefix: ['VITE_', 'GOOGLE_'],
   server: {
-    host: '127.0.0.1',
+    host: 'localhost',
     port: 5173,
     strictPort: true,
     hmr: {
@@ -15,7 +15,7 @@ export default defineConfig({
     },
   },
   preview: {
-    host: '127.0.0.1',
+    host: 'localhost',
     port: 5173,
     strictPort: true,
   },

@@ -48,12 +48,22 @@ class LevelSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     profile = ProfileSerializer()
     levels = LevelSerializer(many=True, read_only=True)
+    total_stars = serializers.SerializerMethodField()
     nickname = serializers.CharField(write_only=True, required=False)
     avatar = serializers.CharField(source='profile.avatar', write_only=True, required=False, allow_blank=True)
     
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'profile', 'levels', 'nickname', 'avatar']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'profile', 'levels', 'total_stars', 'nickname', 'avatar']
+
+    def get_total_stars(self, obj):
+        total = 0.0
+        for level in obj.levels.all():
+            try:
+                total += float(level.stars_earned or 0)
+            except (TypeError, ValueError):
+                continue
+        return total
 
     def update(self, instance, validated_data):
         profile_data = validated_data.pop('profile', {})

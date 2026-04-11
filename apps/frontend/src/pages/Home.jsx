@@ -1,11 +1,13 @@
 import React, { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import { useLanguage } from "../context/LanguageContext"
 import { withAuth } from "../utils/api"
 
 export default function Home() {
   const navigate = useNavigate()
   const { user, token, setUser } = useAuth()
+  const { t } = useLanguage()
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -30,7 +32,7 @@ export default function Home() {
   }, [token, setUser])
   
   // Django structure: user.profile and user.levels
-  const profile = user?.profile || { diamonds: 0, total_marks: 0, rank: "Novice", current_level: 1, gifts: 0 }
+  const profile = user?.profile || { diamonds: 0, total_marks: 0, rank: t("common.novice", "Novice"), current_level: 1, gifts: 0 }
   const userLevels = user?.levels || []
 
   // Helper to get stars for a level
@@ -114,8 +116,8 @@ export default function Home() {
               </svg>
             </div>
             <div className="flex flex-col">
-              <span className="text-white text-xs font-black uppercase tracking-tight group-hover:text-cyan-300 transition-colors">{user?.username || "Guest"}</span>
-              <span className="text-orange-300 text-[10px] font-bold uppercase tracking-widest">{profile.rank}</span>
+              <span className="text-white text-xs font-black uppercase tracking-tight group-hover:text-cyan-300 transition-colors">{user?.username || t("common.guest", "Guest")}</span>
+              <span className="text-orange-300 text-[10px] font-bold uppercase tracking-widest">{profile.rank || t("common.novice", "Novice")}</span>
             </div>
           </div>
         </div>

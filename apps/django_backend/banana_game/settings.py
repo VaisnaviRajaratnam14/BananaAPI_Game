@@ -128,6 +128,19 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+# Email settings for password reset mail.
+# Configure SMTP in environment for real email sending.
+EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@banana-game.local")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = str(os.getenv("EMAIL_USE_TLS", "true")).lower() == "true"
+
+# Used by forgot-password endpoint when constructing frontend reset links.
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
 # Optional: set GOOGLE_CLIENT_ID in environment for strict token audience checks.
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 if GOOGLE_CLIENT_ID and "YOUR_GOOGLE_CLIENT_ID" in GOOGLE_CLIENT_ID:

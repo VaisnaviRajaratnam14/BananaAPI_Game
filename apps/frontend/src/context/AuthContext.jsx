@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { withAuth } from "../utils/api"
 
 const AuthContext = createContext(null)
 
@@ -23,6 +24,28 @@ export function AuthProvider({ children }) {
     if (user) localStorage.setItem("user", JSON.stringify(user))
     else localStorage.removeItem("user")
   }, [user])
+
+  useEffect(() => {
+    if (!token) return
+
+    let cancelled = false
+
+    async function refreshUser() {
+      try {
+        const api = withAuth(token)
+        const res = await api.get("user/stats/")
+        if (!cancelled) setUser(res.data)
+      } catch (error) {
+        console.error("Failed to refresh user session:", error)
+      }
+    }
+
+    refreshUser()
+
+    return () => {
+      cancelled = true
+    }
+  }, [token])
 
   const login = (newToken) => {
     setToken(newToken)
