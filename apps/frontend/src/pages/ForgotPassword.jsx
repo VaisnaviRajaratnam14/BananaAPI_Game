@@ -1,5 +1,5 @@
-import React, { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import React, { useMemo, useState } from "react"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { api } from "../utils/api"
 import { useLanguage } from "../context/LanguageContext"
 import bgImage from "../assets/background.avif"
@@ -7,8 +7,10 @@ import bgImage from "../assets/background.avif"
 export default function ForgotPassword() {
   const navigate = useNavigate()
   const { t } = useLanguage()
+  const [params] = useSearchParams()
+  const prefetchedEmail = useMemo(() => (params.get("email") || "").trim(), [params])
 
-  const [identifier, setIdentifier] = useState("")
+  const [email, setEmail] = useState(prefetchedEmail)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
@@ -18,17 +20,23 @@ export default function ForgotPassword() {
     setError("")
     setSuccess("")
 
-    if (!identifier.trim()) {
-      setError("Please enter username or email")
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail) {
+      setError("Please enter your email")
+      return
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      setError("Please enter a valid email address")
       return
     }
 
     setLoading(true)
     try {
-      await api.post("auth/password/forgot/", {
-        identifier: identifier.trim(),
+      await api.post("forgot-password/", {
+        email: normalizedEmail,
       })
-      setSuccess("If your account exists, we sent a password reset link to your email.")
+      setSuccess("If the email is registered, a password reset link will be sent.")
       window.setTimeout(() => navigate("/login"), 1800)
     } catch (err) {
       const msg = err?.response?.data?.error || "Could not send reset email"
@@ -49,14 +57,14 @@ export default function ForgotPassword() {
         <h1 className="text-3xl font-black text-cyan-300 uppercase mb-2">
           {t("login.forgotPassword", "Forgot Password?")}
         </h1>
-        <p className="text-cyan-200/70 text-sm mb-6">Enter username or email to receive a reset link</p>
+        <p className="text-cyan-200/70 text-sm mb-6">Enter your login email to receive a reset link.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
-            value={identifier}
-            onChange={(e) => setIdentifier(e.target.value)}
-            placeholder={t("login.usernameOrEmail", "USERNAME OR EMAIL")}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder={t("login.email", "EMAIL")}
             className="w-full bg-[#071428] text-white placeholder-white/30 px-4 py-3 rounded-xl border-2 border-cyan-500/40 focus:border-cyan-400 outline-none"
             required
           />

@@ -16,6 +16,9 @@ urlpatterns = [
     path('auth/password/', ChangePasswordView.as_view(), name='change_password'),
     path('auth/password/forgot/', ForgotPasswordView.as_view(), name='forgot_password'),
     path('auth/password/reset/', ResetPasswordConfirmView.as_view(), name='reset_password_confirm'),
+    # Aliases requested for client integration simplicity.
+    path('forgot-password/', ForgotPasswordView.as_view(), name='forgot_password_alias'),
+    path('reset-password/', ResetPasswordConfirmView.as_view(), name='reset_password_alias'),
     path('user/stats/', UserStatsView.as_view(), name='user_stats'),
     path('user/update/', UpdateProfileView.as_view(), name='user_update'),
     path('game/puzzle/', PuzzleView.as_view(), name='game_puzzle'),
