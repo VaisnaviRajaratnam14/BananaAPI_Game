@@ -7,7 +7,6 @@ export default function ResetPassword() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
 
-  const uid = useMemo(() => (params.get("uid") || "").trim(), [params])
   const token = useMemo(() => (params.get("token") || "").trim(), [params])
 
   const [newPassword, setNewPassword] = useState("")
@@ -21,7 +20,7 @@ export default function ResetPassword() {
     setError("")
     setSuccess("")
 
-    if (!uid || !token) {
+    if (!token) {
       setError("Invalid or expired reset link")
       return
     }
@@ -38,7 +37,7 @@ export default function ResetPassword() {
 
     setLoading(true)
     try {
-      await api.post("auth/password/reset/", { uid, token, newPassword })
+      await api.post("reset-password/", { token, newPassword })
       setSuccess("Password reset successful. Redirecting to login...")
       window.setTimeout(() => navigate("/login"), 1400)
     } catch (err) {

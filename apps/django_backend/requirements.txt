@@ -4,3 +4,4 @@ django-cors-headers
 djangorestframework-simplejwt
 requests
 google-auth
+argon2-cffi

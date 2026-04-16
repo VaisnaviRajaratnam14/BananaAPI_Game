@@ -268,7 +268,10 @@ export default function Login() {
           <Link to="/register" className="text-cyan-400 hover:text-orange-400 font-black italic uppercase tracking-tighter text-base transition-colors">
             {t("login.newExplorer", "New Explorer? Join Now!")}
           </Link>
-          <Link to="/forgot" className="text-white/40 hover:text-white/70 font-bold italic uppercase tracking-tighter text-xs transition-colors">
+          <Link
+            to={`/forgot${identifier.includes("@") ? `?email=${encodeURIComponent(identifier.trim())}` : ""}`}
+            className="text-white/40 hover:text-white/70 font-bold italic uppercase tracking-tighter text-xs transition-colors"
+          >
             {t("login.forgotPassword", "Forgot Password?")}
           </Link>
         </div>

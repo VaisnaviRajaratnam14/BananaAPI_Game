@@ -3,12 +3,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.contrib.auth.models import User
 from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings
 from django.core.mail import send_mail
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from .models import Profile, Level
+from django.core.cache import cache
+from django.utils import timezone
+import logging
+from .models import Profile, Level, PasswordResetToken
 from .serializers import (
     RegisterSerializer, UserSerializer, ProfileSerializer, 
     LevelSerializer, LeaderboardSerializer, CustomTokenObtainPairSerializer
@@ -16,13 +16,18 @@ from .serializers import (
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db.models import Q
+from datetime import timedelta
+import hashlib
 import math
 import os
 import requests
 import random
 import re
+import secrets
 from google.auth.transport.requests import Request as GoogleRequest
 from google.oauth2 import id_token as google_id_token
+
+logger = logging.getLogger(__name__)
 
 class CustomLoginView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
@@ -297,30 +302,62 @@ class ChangePasswordView(APIView):
 class ForgotPasswordView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    GENERIC_MESSAGE = "If the email is registered, a password reset link will be sent"
+
+    def _hash_token(self, raw_token):
+        return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+    def _client_ip(self, request):
+        forwarded = (request.META.get("HTTP_X_FORWARDED_FOR") or "").strip()
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return (request.META.get("REMOTE_ADDR") or "unknown").strip()
+
+    def _is_rate_limited(self, request, email):
+        # Limit reset mail spam by email + client IP: 5 attempts / 15 minutes.
+        key = f"pwd-reset:forgot:{self._client_ip(request)}:{email}"
+        attempts = cache.get(key, 0)
+        if attempts >= 5:
+            return True
+        cache.set(key, attempts + 1, timeout=15 * 60)
+        return False
+
+    def _frontend_base(self):
+        raw = (getattr(settings, "FRONTEND_URL", "") or "http://localhost:5173").strip().rstrip("/")
+        return raw
+
     def post(self, request):
-        identifier = (request.data.get('identifier') or '').strip()
-        if not identifier:
-            return Response({"error": "identifier is required"}, status=status.HTTP_400_BAD_REQUEST)
+        email = (request.data.get('email') or '').strip().lower()
+        if not email:
+            return Response({"error": "email is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if self._is_rate_limited(request, email):
+            return Response({"message": self.GENERIC_MESSAGE}, status=status.HTTP_200_OK)
 
         user_model = get_user_model()
-        user = user_model.objects.filter(
-            Q(username__iexact=identifier) | Q(email__iexact=identifier)
-        ).first()
+        user = user_model.objects.filter(email__iexact=email).first()
 
-        # Always return success message to avoid account enumeration.
+        # Do not reveal whether the account exists.
         if not user or not getattr(user, "email", None):
-            return Response({"message": "If the account exists, a password reset link has been sent"})
+            return Response({"message": self.GENERIC_MESSAGE}, status=status.HTTP_200_OK)
 
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-        frontend_base = (os.getenv("FRONTEND_URL", "http://localhost:5173") or "http://localhost:5173").rstrip("/")
-        reset_link = f"{frontend_base}/reset-password?uid={uid}&token={token}"
+        raw_token = secrets.token_urlsafe(32)
+        token_hash = self._hash_token(raw_token)
+        expires_at = timezone.now() + timedelta(minutes=15)
+
+        PasswordResetToken.objects.filter(user=user, used_at__isnull=True).update(used_at=timezone.now())
+        PasswordResetToken.objects.create(user=user, token_hash=token_hash, expires_at=expires_at)
+
+        frontend_base = self._frontend_base()
+        reset_link = f"{frontend_base}/reset-password?token={raw_token}"
 
         subject = "Banana Game Password Reset"
         message = (
-            "We received a request to reset your password.\n\n"
-            f"Reset link: {reset_link}\n\n"
-            "If you did not request this, you can safely ignore this email."
+            "Hi,\n\n"
+            "We received a request to reset your Banana Game password.\n"
+            f"Click this secure link (valid for 15 minutes):\n{reset_link}\n\n"
+            "If you did not request this reset, you can safely ignore this email.\n"
+            "This link can be used only once."
         )
 
         try:
@@ -332,21 +369,45 @@ class ForgotPasswordView(APIView):
                 fail_silently=False,
             )
         except Exception as e:
-            return Response({"error": f"Failed to send reset email: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            logger.exception("Password reset email send failure")
+            return Response(
+                {"error": "Could not send reset email. Check SMTP credentials and email server settings."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-        return Response({"message": "If the account exists, a password reset link has been sent"})
+        return Response({"message": self.GENERIC_MESSAGE}, status=status.HTTP_200_OK)
 
 
 class ResetPasswordConfirmView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    def _hash_token(self, raw_token):
+        return hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+
+    def _client_ip(self, request):
+        forwarded = (request.META.get("HTTP_X_FORWARDED_FOR") or "").strip()
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+        return (request.META.get("REMOTE_ADDR") or "unknown").strip()
+
+    def _is_rate_limited(self, request):
+        # Limit token brute-force attempts by IP: 10 attempts / 15 minutes.
+        key = f"pwd-reset:confirm:{self._client_ip(request)}"
+        attempts = cache.get(key, 0)
+        if attempts >= 10:
+            return True
+        cache.set(key, attempts + 1, timeout=15 * 60)
+        return False
+
     def post(self, request):
-        uid = (request.data.get("uid") or "").strip()
         token = (request.data.get("token") or "").strip()
         new_password = request.data.get("newPassword")
 
-        if not uid or not token or not new_password:
-            return Response({"error": "uid, token and newPassword are required"}, status=status.HTTP_400_BAD_REQUEST)
+        if self._is_rate_limited(request):
+            return Response({"error": "Too many attempts. Please try again later."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+
+        if not token or not new_password:
+            return Response({"error": "token and newPassword are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = RegisterSerializer()
         try:
@@ -354,17 +415,29 @@ class ResetPasswordConfirmView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            user_id = force_str(urlsafe_base64_decode(uid))
-            user = get_user_model().objects.get(pk=user_id)
-        except Exception:
+        token_hash = self._hash_token(token)
+        reset_record = PasswordResetToken.objects.filter(token_hash=token_hash).select_related("user").first()
+
+        if not reset_record:
             return Response({"error": "Invalid or expired reset link"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not default_token_generator.check_token(user, token):
+        if reset_record.used_at is not None:
+            return Response({"error": "This reset link was already used"}, status=status.HTTP_400_BAD_REQUEST)
+
+        if timezone.now() >= reset_record.expires_at:
             return Response({"error": "Invalid or expired reset link"}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = reset_record.user
 
         user.set_password(new_password)
         user.save()
+
+        # Mark token as used and invalidate any other active tokens for this user.
+        now = timezone.now()
+        reset_record.used_at = now
+        reset_record.save(update_fields=["used_at"])
+        PasswordResetToken.objects.filter(user=user, used_at__isnull=True).exclude(pk=reset_record.pk).update(used_at=now)
+
         return Response({"message": "Password reset successfully"})
 
 class CollectRewardsView(APIView):
