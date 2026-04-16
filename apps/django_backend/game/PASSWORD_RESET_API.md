@@ -79,6 +79,11 @@ If you did not request this reset, you can safely ignore this email.
 This link can be used only once.
 ```
 
+## Email Delivery Setup
+- The project is configured for Gmail SMTP when `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`.
+- Password reset delivery requires a valid Gmail App Password, not the normal account password.
+- If SMTP is not configured correctly, Django will raise an authentication error and the reset mail will not be delivered.
+
 ## Security Notes Implemented
 - Random token generated with `secrets.token_urlsafe(32)`
 - Token stored as SHA-256 hash in DB (not plain token)
@@ -86,7 +91,7 @@ This link can be used only once.
 - Single-use token (`used_at` set after successful reset)
 - Other active tokens invalidated once password is reset
 - Non-enumerating forgot-password response
-- HTTPS-only reset links
+- Reset links use the configured `FRONTEND_URL`
 - Rate limiting:
   - Forgot endpoint: 5 attempts / 15 min per IP+email
   - Reset endpoint: 10 attempts / 15 min per IP
