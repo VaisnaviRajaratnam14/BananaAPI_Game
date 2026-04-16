@@ -19,7 +19,7 @@ export default function Game() {
   const api = withAuth(token)
   const [puzzle, setPuzzle] = useState(null)
   const [answer, setAnswer] = useState("")
-  const [seconds, setSeconds] = useState(60)
+  const [seconds, setSeconds] = useState(30)
   const [score, setScore] = useState(0)
   const [status, setStatus] = useState("")
   const [musicEnabled, setMusicEnabled] = useState(localStorage.getItem("musicEnabled") !== "false")
@@ -60,9 +60,11 @@ export default function Game() {
     return 680
   }
 
-  const getRoundSeconds = () => 60
+  const getRoundSeconds = () => 30
 
   const currentEmoji = attempts === 3 ? "🍌" : "😊"
+  const currentRank = (user?.profile?.rank || "").trim()
+  const showRank = Boolean(currentRank && currentRank.toLowerCase() !== "novice")
 
   useEffect(() => {
     if (token) {
@@ -398,7 +400,9 @@ export default function Game() {
             </div>
             <div className="flex flex-col">
               <span className="text-white text-xs font-black uppercase tracking-tight group-hover:text-cyan-300 transition-colors">{user?.username || "Guest"}</span>
-              <span className={`text-[10px] font-bold uppercase tracking-widest ${isMathMode ? 'text-purple-300' : 'text-orange-300'}`}>{user?.profile?.rank || "Novice"}</span>
+              {showRank && (
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${isMathMode ? 'text-purple-300' : 'text-orange-300'}`}>{currentRank}</span>
+              )}
             </div>
           </div>
         </div>
