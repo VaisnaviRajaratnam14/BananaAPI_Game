@@ -32,8 +32,9 @@ export default function Home() {
   }, [token, setUser])
   
   // Django structure: user.profile and user.levels
-  const profile = user?.profile || { diamonds: 0, total_marks: 0, rank: t("common.novice", "Novice"), current_level: 1, gifts: 0 }
+  const profile = user?.profile || { diamonds: 0, total_marks: 0, rank: "", current_level: 1, gifts: 0 }
   const userLevels = user?.levels || []
+  const showRank = Boolean(profile.rank && profile.rank.trim() && profile.rank.toLowerCase() !== "novice")
 
   // Helper to get stars for a level
   const getStars = (levelId) => {
@@ -117,7 +118,9 @@ export default function Home() {
             </div>
             <div className="flex flex-col">
               <span className="text-white text-xs font-black uppercase tracking-tight group-hover:text-cyan-300 transition-colors">{user?.username || t("common.guest", "Guest")}</span>
-              <span className="text-orange-300 text-[10px] font-bold uppercase tracking-widest">{profile.rank || t("common.novice", "Novice")}</span>
+              {showRank && (
+                <span className="text-orange-300 text-[10px] font-bold uppercase tracking-widest">{profile.rank}</span>
+              )}
             </div>
           </div>
         </div>

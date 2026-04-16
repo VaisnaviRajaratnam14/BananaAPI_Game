@@ -13,7 +13,7 @@ export default function Account() {
   const { token, user, setUser, logout } = useAuth()
   const api = withAuth(token)
 
-  const profile = user?.profile || { diamonds: 0, total_marks: 0, rank: t("common.novice", "Novice"), current_level: 1, gifts: 0 }
+  const profile = user?.profile || { diamonds: 0, total_marks: 0, rank: "", current_level: 1, gifts: 0 }
   const userLevels = user?.levels || []
   const totalStars = Number(user?.total_stars || 0)
 
