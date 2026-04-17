@@ -26,7 +26,6 @@ export default function GoogleLoginButton({
   const credentialHandlerRef = useRef(onCredentialResponse)
   const errorHandlerRef = useRef(onLoginError)
 
-  // Match Google button language with selected app language.
   const googleLocale = language === "ta" ? "ta" : language === "si" ? "si" : "en"
 
   useEffect(() => {

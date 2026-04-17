@@ -40,7 +40,6 @@ export default function Game() {
     window.dispatchEvent(new Event("storage"))
   }
 
-  // New Level Logic State
   const [puzzleCount, setPuzzleCount] = useState(1) // 1 to 3
   const [attempts, setAttempts] = useState(3) // 3 attempts per puzzle
   const [isGameOver, setIsGameOver] = useState(false)
@@ -187,7 +186,6 @@ export default function Game() {
       setShowConfetti(true)
       setTimeout(() => setShowConfetti(false), 900)
 
-      // Attempt-based scoring
       let earned = 0
       if (attempts === 3) earned = 50
       else if (attempts === 2) earned = 25
@@ -196,8 +194,6 @@ export default function Game() {
       const newScore = score + earned
       setScore(newScore)
 
-      // Optional: Log completion to backend (if endpoint exists)
-      // await api.post("game/submit", { puzzleId: puzzle.id, earned })
 
       if (puzzleCount < 3) {
         setTimeout(() => {
@@ -207,8 +203,6 @@ export default function Game() {
           loadPuzzle()
         }, 1000)
       } else {
-        // Calculate stars based on final total score
-        // Requirement: 125+ score = 3 stars + Gift Box
         let s = 0
         let hasGift = false
 
@@ -243,7 +237,6 @@ export default function Game() {
         setStatus("Not Correct! Try again.")
       } else {
         setStatus("Not Correct! Out of attempts.")
-        // Calculate stars based on current score
         let s = 0
         let hasGift = false
 

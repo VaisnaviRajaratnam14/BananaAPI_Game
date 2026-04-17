@@ -8,7 +8,6 @@ export default function BackgroundMusic() {
   const [loadError, setLoadError] = useState(false)
   const audioRef = useRef(null)
   
-  // Hide music on auth/intro pages
   const hiddenPages = ["/login", "/forgot", "/reset-password", "/register", "/otp", "/intro"]
   const isHidden = hiddenPages.includes(location.pathname)
 
@@ -22,9 +21,7 @@ export default function BackgroundMusic() {
   }, [])
 
   useEffect(() => {
-    // Initialize audio object if it doesn't exist
     if (!audioRef.current) {
-      // Using a different reliable link
       const audio = new Audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
       audio.loop = true
       audio.volume = volume

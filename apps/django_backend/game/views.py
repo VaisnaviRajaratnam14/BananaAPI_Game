@@ -161,7 +161,6 @@ class GoogleAuthView(APIView):
         if env_value:
             return env_value
 
-        # Dev fallback: read root .env directly when process env is stale.
         try:
             env_path = settings.BASE_DIR.parent.parent / ".env"
             if env_path.exists():
@@ -288,7 +287,6 @@ class ChangePasswordView(APIView):
         if not user.check_password(current_password):
             return Response({"error": "Current password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate new password complexity
         serializer = RegisterSerializer()
         try:
             serializer.validate_password(new_password)
@@ -314,7 +312,6 @@ class ForgotPasswordView(APIView):
         return (request.META.get("REMOTE_ADDR") or "unknown").strip()
 
     def _is_rate_limited(self, request, email):
-        # Limit reset mail spam by email + client IP: 5 attempts / 15 minutes.
         key = f"pwd-reset:forgot:{self._client_ip(request)}:{email}"
         attempts = cache.get(key, 0)
         if attempts >= 5:
@@ -337,7 +334,6 @@ class ForgotPasswordView(APIView):
         user_model = get_user_model()
         user = user_model.objects.filter(email__iexact=email).first()
 
-        # Do not reveal whether the account exists.
         if not user or not getattr(user, "email", None):
             return Response({"message": self.GENERIC_MESSAGE}, status=status.HTTP_200_OK)
 
@@ -391,7 +387,6 @@ class ResetPasswordConfirmView(APIView):
         return (request.META.get("REMOTE_ADDR") or "unknown").strip()
 
     def _is_rate_limited(self, request):
-        # Limit token brute-force attempts by IP: 10 attempts / 15 minutes.
         key = f"pwd-reset:confirm:{self._client_ip(request)}"
         attempts = cache.get(key, 0)
         if attempts >= 10:
@@ -432,7 +427,6 @@ class ResetPasswordConfirmView(APIView):
         user.set_password(new_password)
         user.save()
 
-        # Mark token as used and invalidate any other active tokens for this user.
         now = timezone.now()
         reset_record.used_at = now
         reset_record.save(update_fields=["used_at"])
@@ -477,27 +471,22 @@ class CollectRewardsView(APIView):
         except (TypeError, ValueError):
             time_taken = 0
 
-        # Update Profile stats
         profile.diamonds += diamonds_earned
         profile.gifts += gifts_earned
         profile.total_marks += diamonds_earned # Assuming total marks correlates with diamonds earned
         
-        # Track stars per level
         level_obj, created = Level.objects.get_or_create(user=user, level_number=level_num)
         if stars > level_obj.stars_earned:
             level_obj.stars_earned = stars
         
-        # Update time only when client sends a valid positive duration.
         if time_taken > 0 and (level_obj.total_time_seconds == 0 or time_taken < level_obj.total_time_seconds):
             level_obj.total_time_seconds = time_taken
             
         level_obj.is_unlocked = True
         level_obj.save()
 
-        # Advance current level if needed
         if level_num == profile.current_level:
             profile.current_level += 1
-            # Unlock next level
             next_level, _ = Level.objects.get_or_create(user=user, level_number=profile.current_level)
             next_level.is_unlocked = True
             next_level.save()

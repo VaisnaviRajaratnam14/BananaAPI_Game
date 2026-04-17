@@ -59,7 +59,6 @@ export default function Register() {
     setLoading(true)
     setError("")
 
-    // Frontend Validation
     if (firstName.trim().length < 2) {
       setLoading(false)
       return setError("FIRST NAME: Must be at least 2 characters")
@@ -91,12 +90,10 @@ export default function Register() {
         nickname: username.trim()
       })
       
-      // Navigate to login page after successful registration
       navigate("/login")
     } catch (err) {
       const serverError = err?.response?.data
       if (serverError) {
-        // Collect all error messages from the object
         const allErrors = Object.entries(serverError)
           .map(([key, value]) => `${key.toUpperCase()}: ${Array.isArray(value) ? value[0] : value}`)
           .join(" | ")

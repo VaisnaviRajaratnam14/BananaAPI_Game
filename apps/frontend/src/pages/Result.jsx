@@ -29,7 +29,6 @@ export default function Result() {
     
     if (hasGift && !giftOpened) {
       setGiftOpened(true)
-      // Play a small sound or effect if you have one
       return
     }
 

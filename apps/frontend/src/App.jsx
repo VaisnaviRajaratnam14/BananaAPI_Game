@@ -21,8 +21,6 @@ import { LanguageProvider } from "./context/LanguageContext"
 function Protected({ children }) {
   const { token, user } = useAuth()
   if (!token) return <Navigate to="/login" replace />
-  // MFA (Otp) is not implemented in Django backend yet, so bypassing for now
-  // if (!mfaVerified) return <Navigate to="/otp" replace />
   return children
 }
 
