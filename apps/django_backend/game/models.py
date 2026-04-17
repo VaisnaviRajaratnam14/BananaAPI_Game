@@ -64,7 +64,6 @@ class PasswordResetToken(models.Model):
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
-        # Initialize level 1 as unlocked for new users
         Level.objects.create(user=instance, level_number=1, is_unlocked=True)
 
 @receiver(post_save, sender=User)

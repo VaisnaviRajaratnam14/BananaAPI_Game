@@ -14,10 +14,8 @@ export function withAuth(token) {
   instance.interceptors.response.use(
     (response) => response, // Pass through successful responses
     (error) => {
-      // If the error is due to an expired or invalid token, log the user out
       if (error.response && error.response.status === 401) {
         console.warn("Session expired or token is invalid. Logging out.")
-        // Clear local storage and redirect to login
         localStorage.clear()
         window.location.href = "/login?reason=session_expired"
       }

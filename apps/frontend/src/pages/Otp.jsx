@@ -54,7 +54,6 @@ export default function Otp() {
       setToken(jwt)
       setMfaVerified(true)
 
-      // Fetch profile to populate user context
       const authApi = withAuth(jwt)
       const userRes = await authApi.get("/auth/me")
       setUser(userRes.data)

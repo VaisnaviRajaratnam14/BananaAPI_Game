@@ -13,8 +13,6 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         identifier = attrs.get("username")
         password = attrs.get("password")
 
-        # Find all users matching by username or email (case-insensitive)
-        # Iterate all matches so duplicate emails don't block the right account
         candidates = User.objects.filter(
             Q(username__iexact=identifier) | Q(email__iexact=identifier)
         )
@@ -69,14 +67,12 @@ class UserSerializer(serializers.ModelSerializer):
         profile_data = validated_data.pop('profile', {})
         avatar = profile_data.get('avatar', None)
 
-        # Update User fields
         instance.username = validated_data.get('username', instance.username)
         instance.email = validated_data.get('email', instance.email)
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.save()
         
-        # Update Profile fields
         profile = instance.profile
         profile.nickname = profile_data.get('nickname', profile.nickname)
         if avatar is not None:

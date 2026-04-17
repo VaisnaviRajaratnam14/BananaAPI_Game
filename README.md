@@ -8,8 +8,8 @@ Banana Game is a full-stack web game built with:
 
 ```text
 apps/
-	django_backend/    # Django project, API endpoints, SQLite database
-	frontend/          # React application (Vite)
+	django_backend/
+	frontend/
 ```
 
 ## Prerequisites

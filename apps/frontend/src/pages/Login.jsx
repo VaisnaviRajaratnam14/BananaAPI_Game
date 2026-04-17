@@ -77,7 +77,6 @@ export default function Login() {
     setLoading(true)
     setError("")
 
-    // Frontend Validation
     if (identifier.trim().length < 3) {
       setLoading(false)
       return setError("IDENTIFIER: Must be at least 3 characters")
@@ -88,18 +87,14 @@ export default function Login() {
     }
 
     try {
-      // Django Rest Framework SimpleJWT uses 'username' and 'password'
-      // Mapping 'identifier' to 'username'
       const res = await api.post("auth/login/", { 
         username: identifier.trim(), 
         password: password // Don't trim password as it might have intended spaces
       })
       const { access } = res.data
       
-      // Save token and mark as verified (bypassing OTP for now)
       login(access)
       
-      // Fetch profile data
       const authApi = withAuth(access)
       const userRes = await authApi.get("user/stats/")
       setUser(userRes.data)
@@ -109,7 +104,6 @@ export default function Login() {
       const serverData = err.response?.data
 
       if (serverData && typeof serverData === 'object') {
-        // Handle DRF { detail: "..." } or { non_field_errors: ["..."] } or { username: ["..."] }
         let errorMsg = serverData.detail || serverData.non_field_errors?.[0]
         
         if (!errorMsg) {

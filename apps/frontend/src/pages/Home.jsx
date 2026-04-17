@@ -31,12 +31,10 @@ export default function Home() {
     fetchStats()
   }, [token, setUser])
   
-  // Django structure: user.profile and user.levels
   const profile = user?.profile || { diamonds: 0, total_marks: 0, rank: "", current_level: 1, gifts: 0 }
   const userLevels = user?.levels || []
   const showRank = Boolean(profile.rank && profile.rank.trim() && profile.rank.toLowerCase() !== "novice")
 
-  // Helper to get stars for a level
   const getStars = (levelId) => {
     const levelData = userLevels.find(l => l.level_number === levelId)
     return levelData ? levelData.stars_earned : 0
